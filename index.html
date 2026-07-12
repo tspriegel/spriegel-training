@@ -1,0 +1,1751 @@
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0E1013">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Training">
+<title>Training Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --ink:#0E1013; --panel:#181C21; --panel-2:#20262D; --line:#2C333B;
+    --steel:#8B96A2; --chalk:#EEF1F4; --pin:#F2B01E; --studio:#54BFF0;
+    --done:#68C97F; --radius:14px; --pad:16px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{background:var(--ink);color:var(--chalk);font-family:Inter,system-ui,-apple-system,sans-serif;
+    font-size:15px;line-height:1.45;padding:0 0 100px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:520px;margin:0 auto;padding:0 var(--pad)}
+
+  header{position:sticky;top:0;z-index:20;
+    background:linear-gradient(180deg,var(--ink) 72%,rgba(14,16,19,0));
+    padding:calc(env(safe-area-inset-top) + 14px) 0 12px}
+  .titlebar{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+  h1{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:26px;letter-spacing:.10em;
+    text-transform:uppercase;margin:0;line-height:1}
+  .weeknav{display:flex;align-items:center;gap:2px}
+  .weeknav button{background:none;border:0;color:var(--steel);font-size:18px;padding:4px 8px;cursor:pointer;border-radius:8px}
+  .weeklabel{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--steel);min-width:96px;text-align:center}
+  .strip{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:12px}
+  .daybtn{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 0 7px;
+    text-align:center;cursor:pointer;transition:border-color .15s,background .15s}
+  .daybtn .dow{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:12px;letter-spacing:.10em;
+    text-transform:uppercase;color:var(--steel);display:block}
+  .daybtn .dnum{font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:600;display:block;margin-top:2px}
+  .daybtn .dot{width:5px;height:5px;border-radius:50%;margin:4px auto 0;background:transparent}
+  .daybtn.lift .dot{background:var(--pin)}
+  .daybtn.class .dot{background:var(--studio)}
+  .daybtn.logged .dot{background:var(--done)}
+  .daybtn.today{border-color:var(--steel)}
+  .daybtn.sel{background:var(--panel-2);border-color:var(--chalk)}
+  .daybtn.sel .dow{color:var(--chalk)}
+
+  .dayhead{margin:22px 0 12px}
+  .eyebrow{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:12px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--steel)}
+  .eyebrow.pin{color:var(--pin)} .eyebrow.studio{color:var(--studio)}
+  h2{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:30px;letter-spacing:.03em;
+    text-transform:uppercase;margin:2px 0 0;line-height:1.05}
+  .sub{color:var(--steel);font-size:13px;margin-top:4px}
+
+  /* per-day mode switch */
+  .modes{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+  .mode{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:11px 12px;
+    text-align:left;cursor:pointer;color:var(--steel)}
+  .mode .mt{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:15px;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--chalk);display:block}
+  .mode .ms{font-size:11px;margin-top:2px;display:block;font-family:'IBM Plex Mono',monospace}
+  .mode.on[data-mode=lift]{border-color:var(--pin);background:rgba(242,176,30,.10)}
+  .mode.on[data-mode=lift] .ms{color:var(--pin)}
+  .mode.on[data-mode=class]{border-color:var(--studio);background:rgba(84,191,240,.10)}
+  .mode.on[data-mode=class] .ms{color:var(--studio)}
+
+  .picker{margin-top:12px}
+  .pickhead{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:12px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--steel);margin-bottom:7px}
+  .picks{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .pick{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:11px 12px 12px;text-align:left;cursor:pointer;color:var(--steel);overflow:hidden}
+  .pick .pk{display:block;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:16px;
+    letter-spacing:.08em;text-transform:uppercase;color:var(--chalk)}
+  .pick .pl{display:block;font-size:10.5px;line-height:1.35;margin-top:3px;font-family:'IBM Plex Mono',monospace}
+  .pick .pnext{display:none}
+  .pick.on{border-color:var(--pin);background:rgba(242,176,30,.10)}
+  .pick.on .pl{color:var(--pin)}
+  .live{display:inline-flex;align-items:center;gap:5px;color:var(--pin);font-family:'IBM Plex Mono',monospace;font-size:12px}
+  .live i{width:6px;height:6px;border-radius:50%;background:var(--pin);animation:pulse 1.6s ease-in-out infinite}
+  .live b{font-weight:600}
+  .dur{color:var(--done);font-family:'IBM Plex Mono',monospace;font-size:12px}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+  @media (prefers-reduced-motion:reduce){ .live i{animation:none} }
+  .rest.running{color:var(--pin);gap:6px;min-width:86px;font-weight:600}
+  .dotlive{width:6px;height:6px;border-radius:50%;background:var(--pin);display:inline-block;
+    margin-right:5px;animation:pulse 1.6s ease-in-out infinite}
+  button.btn.stop{background:#E5533D;border-color:#E5533D;color:#2A0A05}
+  .machine.oura svg{padding:2px}
+  .oreadout{display:grid;grid-template-columns:repeat(auto-fit,minmax(64px,1fr));gap:8px}
+  .ostat{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:8px 6px;text-align:center}
+  .ostat b{display:block;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:19px;color:var(--pin);line-height:1}
+  .ostat span{display:block;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--steel);margin-top:4px}
+  .runbig{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:22px;line-height:1;
+    color:var(--pin);text-align:center}
+  .runcard .badge.ok{background:rgba(104,201,127,.12);color:var(--done);border-color:rgba(104,201,127,.35)}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);margin-top:12px;overflow:hidden}
+  .card.done{border-color:rgba(104,201,127,.45)}
+  .cardtop{display:flex;gap:12px;padding:12px;align-items:flex-start}
+  .machine{flex:0 0 84px;height:64px;background:var(--panel-2);border-radius:9px;display:flex;
+    align-items:center;justify-content:center;overflow:hidden;cursor:pointer;position:relative;border:1px solid transparent}
+  .machine:active{border-color:var(--pin)}
+  .machine svg{width:100%;height:100%}
+  .machine img{width:100%;height:100%;object-fit:cover}
+  .machine .zoom{position:absolute;right:3px;bottom:3px;font-size:9px;color:var(--steel);
+    font-family:'IBM Plex Mono',monospace;background:rgba(14,16,19,.7);border-radius:4px;padding:0 3px}
+  .exmeta{flex:1;min-width:0;cursor:pointer}
+  .exname{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:19px;letter-spacing:.04em;
+    text-transform:uppercase;line-height:1.1}
+  .precor{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--steel);margin-top:3px}
+  .target{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--pin);margin-top:5px}
+  .last{font-size:11.5px;color:var(--steel);margin-top:3px;font-family:'IBM Plex Mono',monospace}
+  .badge{display:inline-block;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:11px;
+    letter-spacing:.10em;text-transform:uppercase;background:rgba(242,176,30,.14);color:var(--pin);
+    border:1px solid rgba(242,176,30,.35);padding:1px 6px;border-radius:5px;margin-top:6px}
+  .stack{flex:0 0 26px;display:flex;flex-direction:column;align-items:center;padding-top:2px}
+  .stack svg{width:26px;height:64px}
+  .stackval{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--steel);margin-top:3px}
+
+  .sets{border-top:1px solid var(--line);padding:10px 12px 12px;display:none}
+  .card.open .sets{display:block}
+  .setrow{display:grid;grid-template-columns:22px 1fr 1fr 34px;gap:8px;align-items:center;margin-bottom:8px}
+  .setno{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--steel);text-align:center}
+  .field{position:relative}
+  .field label{position:absolute;right:9px;top:50%;transform:translateY(-50%);font-family:'IBM Plex Mono',monospace;
+    font-size:10px;color:var(--steel);pointer-events:none}
+  input[type=number],input[type=text],input[type=time],textarea{width:100%;background:var(--panel-2);
+    border:1px solid var(--line);color:var(--chalk);border-radius:9px;padding:11px 34px 11px 11px;
+    font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600;outline:none}
+  input[type=text],textarea{padding-right:11px;font-family:Inter,sans-serif;font-weight:400}
+  input:focus,textarea:focus{border-color:var(--pin)}
+  input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  input[type=number]{-moz-appearance:textfield}
+  .tick{width:34px;height:42px;border:1px solid var(--line);border-radius:9px;background:var(--panel-2);
+    color:var(--steel);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .tick.on{background:rgba(104,201,127,.14);border-color:rgba(104,201,127,.5);color:var(--done)}
+  .cue{font-size:12px;color:var(--steel);margin:2px 0 10px;line-height:1.4}
+  .rowbtns{display:flex;gap:8px;margin-top:2px}
+
+  button.btn{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:14px;letter-spacing:.10em;
+    text-transform:uppercase;background:var(--panel-2);border:1px solid var(--line);color:var(--chalk);
+    padding:11px 14px;border-radius:10px;cursor:pointer}
+  button.btn:active{background:var(--line)}
+  button.btn.primary{background:var(--pin);border-color:var(--pin);color:#1A1400}
+  button.btn.studio{background:var(--studio);border-color:var(--studio);color:#00202E}
+  button.btn.ghost{background:none}
+  button.btn.wide{width:100%}
+  button.btn.sm{padding:7px 10px;font-size:12px}
+
+  .classcard .cardtop{align-items:center}
+  .clock{flex:0 0 62px;text-align:center;font-family:'IBM Plex Mono',monospace}
+  .clock .t{font-size:16px;font-weight:600;color:var(--studio)}
+  .clock .m{font-size:10px;color:var(--steel)}
+  .empty{border:1px dashed var(--line);border-radius:var(--radius);padding:20px 16px;margin-top:12px;
+    text-align:center;color:var(--steel);font-size:13.5px}
+  .empty b{display:block;color:var(--chalk);font-family:'Barlow Condensed',sans-serif;font-weight:600;
+    letter-spacing:.08em;text-transform:uppercase;font-size:16px;margin-bottom:5px}
+
+  .sheet{position:fixed;inset:0;z-index:40;background:rgba(8,9,11,.72);display:none;align-items:flex-end;justify-content:center}
+  .sheet.on{display:flex}
+  .sheetbody{width:100%;max-width:520px;background:var(--panel);border:1px solid var(--line);
+    border-radius:18px 18px 0 0;padding:18px var(--pad) calc(env(safe-area-inset-bottom) + 22px);
+    max-height:90vh;overflow:auto}
+  .sheetbody h3{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:22px;letter-spacing:.08em;
+    text-transform:uppercase;margin:0 0 2px}
+  .modelline{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--pin);margin-bottom:14px}
+  .hero{background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:6px;margin-bottom:6px}
+  .hero svg{width:100%;height:auto;display:block}
+  .hero img{width:100%;border-radius:8px;display:block}
+  .shots{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+  .shot{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:4px}
+  .shot svg{width:100%;height:auto;display:block}
+  .shotcap{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--steel);text-align:center;padding:2px 0 3px}
+  .steps{margin:0 0 12px;padding-left:18px;font-size:13.5px;color:var(--chalk)}
+  .steps li{margin-bottom:5px}
+  .steps li span{color:var(--steel)}
+  .fieldrow{margin-bottom:12px}
+  .fieldrow .lbl{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:12px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--steel);margin-bottom:5px}
+  .note{font-size:12px;color:var(--steel);line-height:1.5;margin-top:8px}
+  .note a{color:var(--studio)}
+  .msg{font-size:12.5px;margin-top:10px;padding:10px;border-radius:9px;background:var(--panel-2);color:var(--steel);display:none}
+  .msg.on{display:block} .msg.err{color:#F2907E} .msg.ok{color:var(--done)}
+  .seg{display:flex;gap:6px;margin-bottom:14px}
+  .seg button{flex:1}
+  .seg button.on{background:var(--panel-2);border-color:var(--chalk);color:var(--chalk)}
+  a.linkbtn{display:block;text-align:center;text-decoration:none}
+
+  /* ---------- history ---------- */
+  .tabs{display:flex;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:3px}
+  .tabs button{flex:1;background:none;border:0;color:var(--steel);cursor:pointer;border-radius:7px;padding:5px 10px;
+    font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:12px;letter-spacing:.10em;text-transform:uppercase}
+  .tabs button.on{background:var(--panel-2);color:var(--chalk)}
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+  .stat .v{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:30px;line-height:1;letter-spacing:.02em}
+  .stat .v small{font-size:13px;color:var(--steel);font-weight:600;margin-left:3px}
+  .stat .k{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--steel);margin-top:6px;letter-spacing:.02em}
+  .stat.pin .v{color:var(--pin)} .stat.studio .v{color:var(--studio)}
+  .hsec{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:13px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--steel);margin:26px 0 8px}
+  .panelbox{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 12px 10px}
+  .panelbox svg{width:100%;height:auto;display:block}
+  .legend{display:flex;gap:14px;margin-top:8px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--steel)}
+  .legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px}
+  .exrow{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;padding:10px 12px;margin-bottom:8px}
+  .exrow .en{flex:1;min-width:0}
+  .exrow .en b{display:block;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:15px;
+    letter-spacing:.05em;text-transform:uppercase}
+  .exrow .en span{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--steel)}
+  .exrow .spark{flex:0 0 78px}
+  .exrow .spark svg{width:78px;height:26px;display:block}
+  .exrow .pr{flex:0 0 auto;text-align:right;font-family:'IBM Plex Mono',monospace}
+  .exrow .pr b{display:block;font-size:14px;color:var(--chalk)}
+  .exrow .pr span{font-size:10px;color:var(--done)}
+  .exrow .pr span.flat{color:var(--steel)}
+  .sess{display:flex;gap:10px;align-items:center;background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;padding:10px 12px;margin-bottom:8px}
+  .sess .tag{flex:0 0 42px;height:42px;border-radius:9px;display:flex;align-items:center;justify-content:center;
+    font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:16px}
+  .sess .tag.lift{background:rgba(242,176,30,.12);color:var(--pin);border:1px solid rgba(242,176,30,.3)}
+  .sess .tag.class{background:rgba(84,191,240,.12);color:var(--studio);border:1px solid rgba(84,191,240,.3)}
+  .sess .sm{flex:1;min-width:0}
+  .sess .sm b{display:block;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:15px;
+    letter-spacing:.05em;text-transform:uppercase}
+  .sess .sm span{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--steel)}
+  .sess .sm{cursor:pointer}
+  .sess .del{flex:0 0 auto;background:none;border:0;color:var(--steel);font-size:15px;cursor:pointer;
+    padding:6px 4px;border-radius:8px;opacity:.55}
+  .sess .del:active{background:var(--panel-2);opacity:1}
+  .sess.confirming{border-color:rgba(229,83,61,.55);background:rgba(229,83,61,.07)}
+  .sess.confirming .sm b{color:#F2907E}
+  button.btn.danger{background:#E5533D;border-color:#E5533D;color:#2A0A05}
+  #undo{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 78px);z-index:35;
+    display:none;justify-content:center;padding:0 var(--pad);pointer-events:none}
+  #undo.on{display:flex}
+  #undo>*{pointer-events:auto}
+  #undo span{background:var(--panel-2);border:1px solid var(--line);border-right:0;
+    border-radius:10px 0 0 10px;padding:10px 12px;font-size:12.5px;color:var(--chalk);
+    max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #undo button{border-radius:0 10px 10px 0;border-left:0;background:var(--panel-2)}
+
+  .bar{position:fixed;left:0;right:0;bottom:0;z-index:30;
+    background:linear-gradient(0deg,var(--ink) 62%,rgba(14,16,19,0));
+    padding:14px var(--pad) calc(env(safe-area-inset-bottom) + 14px)}
+  .barin{max-width:520px;margin:0 auto;display:flex;gap:8px}
+  .rest{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--pin);display:flex;
+    align-items:center;justify-content:center;min-width:64px}
+  hr.rule{border:0;border-top:1px solid var(--line);margin:22px 0 0}
+  .foot{font-size:11.5px;color:var(--steel);margin-top:14px;line-height:1.5}
+  @media (prefers-reduced-motion:no-preference){ .pinmark{transition:transform .35s cubic-bezier(.2,.8,.2,1)} }
+</style>
+
+<header>
+  <div class="wrap">
+    <div class="titlebar">
+      <h1>Training</h1>
+      <div class="tabs" id="tabs">
+        <button data-view="week" class="on">Week</button>
+        <button data-view="history">History</button>
+      </div>
+    </div>
+    <div class="weeknav" id="weeknav" style="justify-content:flex-end;margin-top:8px">
+      <button id="prev" aria-label="Previous week">‹</button>
+      <span class="weeklabel" id="weeklabel"></span>
+      <button id="next" aria-label="Next week">›</button>
+    </div>
+    <div class="strip" id="strip"></div>
+  </div>
+</header>
+
+<main class="wrap" id="main"></main>
+<div id="undo"></div>
+<div class="bar"><div class="barin" id="bar"></div></div>
+<div class="sheet" id="sheet"><div class="sheetbody" id="sheetbody"></div></div>
+
+<script>
+/* ===================== STORAGE ===================== */
+const KEY='training:v2';
+const Store={
+  async load(){
+    try{ if(window.storage){ const r=await window.storage.get(KEY,false); return r&&r.value?JSON.parse(r.value):null; } }catch(e){}
+    try{ const s=localStorage.getItem(KEY); return s?JSON.parse(s):null; }catch(e){ return null; }
+  },
+  async save(d){
+    const s=JSON.stringify(d);
+    try{ if(window.storage){ await window.storage.set(KEY,s,false); return; } }catch(e){}
+    try{ localStorage.setItem(KEY,s); }catch(e){}
+  }
+};
+let DB={logs:{},events:[],photos:{},settings:{unit:'lb'}};
+let t_; function persist(){ clearTimeout(t_); t_=setTimeout(()=>Store.save(DB),250); }
+
+/* ===================== MACHINE ART =====================
+   Schematic drawings of the Precor pieces. Two views per machine:
+   the side profile (spot it on the floor) and the setup position. */
+const L='#8B96A2', A='#F2B01E', D='#39424C';
+function sv(inner,w=180,h=130){
+  return `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" fill="none"
+    stroke-linecap="round" stroke-linejoin="round"><g stroke="${L}" stroke-width="4">${inner}</g></svg>`;
+}
+/* shrouded selectorized weight stack — the Precor signature silhouette */
+const shroud=(x,y=28,h=68)=>`<rect x="${x}" y="${y}" width="24" height="${h}" rx="4" fill="${D}" fill-opacity=".5"/>
+  <path d="M${x+5} ${y+14}h14M${x+5} ${y+27}h14M${x+5} ${y+40}h14M${x+5} ${y+53}h14"/>
+  <path d="M${x+12} ${y-12}v${12}"/>`;
+const pin=(x,y)=>`<path d="M${x} ${y}h10" stroke="${A}" stroke-width="5"/>`;
+
+const ART={
+  legpress:{
+    side: sv(`${shroud(14)}${pin(38,58)}<path d="M64 108h84"/><path d="M70 108V84l16-9"/>
+      <path d="M86 75l18-11" stroke="${A}"/><path d="M104 64l24-14"/><path d="M126 46l20 12" stroke="${A}"/>
+      <path d="M128 108V66"/><path d="M108 108V88"/>`),
+    setup: sv(`<path d="M30 106h120"/><path d="M46 106V72"/><path d="M46 72l30-16"/>
+      <path d="M76 56l22 6" stroke="${A}"/><path d="M98 62l26-18" stroke="${A}"/>
+      <path d="M124 44v30"/><circle cx="60" cy="52" r="10"/><path d="M46 72l14-10"/>`)
+  },
+  chestpress:{
+    side: sv(`${shroud(140)}${pin(128,60)}<path d="M28 108h72"/><path d="M46 108V72h30"/>
+      <path d="M46 72V44"/><path d="M76 72V50" stroke="${A}"/><path d="M86 50h26" stroke="${A}"/>
+      <path d="M112 50v52"/><path d="M100 108V50"/>`),
+    setup: sv(`<path d="M40 108h96"/><path d="M58 108V64"/><path d="M58 64v-20"/>
+      <circle cx="72" cy="40" r="10"/><path d="M64 62h22" stroke="${A}"/>
+      <path d="M86 62h28" stroke="${A}"/><path d="M114 62V38"/><path d="M58 84h26"/>`)
+  },
+  latpulldown:{
+    side: sv(`${shroud(140)}${pin(128,54)}<path d="M26 108h70"/><path d="M50 108V80h30"/>
+      <path d="M50 80V56"/><path d="M64 22h68"/><path d="M84 22v22" stroke="${A}"/>
+      <path d="M62 44h44" stroke="${A}"/><path d="M132 22v86"/>`),
+    setup: sv(`<path d="M34 108h100"/><path d="M56 108V78h34"/><path d="M56 78V56"/>
+      <circle cx="80" cy="46" r="10"/><path d="M62 30h60" stroke="${A}"/>
+      <path d="M80 30v10" stroke="${A}"/><path d="M70 56l10 6 10-6"/><path d="M56 92h30"/>`)
+  },
+  legcurl:{
+    side: sv(`${shroud(140)}${pin(128,60)}<path d="M22 108h72"/><path d="M38 108V80h36"/>
+      <path d="M38 80V54"/><path d="M74 80l26 8" stroke="${A}"/><path d="M100 88v14" stroke="${A}"/>
+      <path d="M92 102h20"/><path d="M112 108V70"/>`),
+    setup: sv(`<path d="M30 108h110"/><path d="M50 108V72h40"/><path d="M50 72V44"/>
+      <circle cx="62" cy="34" r="10"/><path d="M90 72l18 10" stroke="${A}"/>
+      <path d="M108 82v16" stroke="${A}"/><path d="M100 98h20"/><path d="M90 66h16"/>`)
+  },
+  shoulderpress:{
+    side: sv(`${shroud(140)}${pin(128,54)}<path d="M30 108h64"/><path d="M50 108V74h26"/>
+      <path d="M50 74V44"/><path d="M62 36h34" stroke="${A}"/><path d="M62 36V22" stroke="${A}"/>
+      <path d="M96 36v58"/>`),
+    setup: sv(`<path d="M40 108h94"/><path d="M60 108V70"/><path d="M60 70V46"/>
+      <circle cx="74" cy="38" r="10"/><path d="M60 26h34" stroke="${A}"/>
+      <path d="M62 26v14" stroke="${A}"/><path d="M94 26v18"/><path d="M60 88h26"/>`)
+  },
+  cable:{
+    side: sv(`<path d="M22 108h130"/><path d="M38 108V22"/><path d="M136 108V22"/>
+      <path d="M38 22h98"/><path d="M56 22v40" stroke="${A}"/><path d="M46 62h20" stroke="${A}"/>
+      <path d="M118 22v54" stroke="${A}"/><path d="M108 76h20" stroke="${A}"/><path d="M70 108V58h18v50"/>`),
+    setup: sv(`<path d="M30 108h114"/><path d="M120 108V24"/><path d="M120 24h-16"/>
+      <path d="M104 24v22" stroke="${A}"/><path d="M104 46l-28 8" stroke="${A}"/>
+      <circle cx="62" cy="44" r="10"/><path d="M62 54v22"/><path d="M62 76l-10 22M62 76l12 22"/>`)
+  },
+  core:{
+    side: sv(`<path d="M32 108h104"/><path d="M46 108V26"/><path d="M46 26h68"/>
+      <path d="M80 26v20" stroke="${A}"/><path d="M64 46h32" stroke="${A}"/><path d="M80 46v24"/>
+      <path d="M80 70l-14 18M80 70l14 18"/>`),
+    setup: sv(`<path d="M36 108h108"/><path d="M120 108V28"/><path d="M120 28h-22"/>
+      <path d="M98 28v16" stroke="${A}"/><path d="M98 44l-24 8" stroke="${A}"/>
+      <circle cx="64" cy="58" r="10"/><path d="M64 68v18"/><path d="M56 96l8-10 10 12"/>`)
+  },
+  hacksquat:{
+    side: sv(`${shroud(142)}${pin(130,58)}<path d="M18 112h84"/><path d="M32 112L106 38"/>
+      <path d="M52 112l52-52" stroke="${A}"/><path d="M92 42l22 22" stroke="${A}"/>
+      <path d="M106 38l20 20"/><path d="M32 112V92"/><path d="M64 92h26"/>`),
+    setup: sv(`<path d="M24 112h112"/><path d="M40 112L112 40"/><path d="M56 96l30-30" stroke="${A}"/>
+      <circle cx="88" cy="56" r="10"/><path d="M78 66l-14 22" stroke="${A}"/>
+      <path d="M64 88h26"/><path d="M96 46l16 16"/>`)
+  },
+  cablerow:{
+    side: sv(`${shroud(14)}${pin(38,60)}<path d="M46 108h106"/><path d="M62 108V82h34"/>
+      <path d="M96 82V58"/><path d="M96 70H54" stroke="${A}"/><path d="M54 62v16" stroke="${A}"/>
+      <path d="M124 108V88h26"/>`),
+    setup: sv(`<path d="M28 108h116"/><path d="M120 108V88h22"/><path d="M120 96H74" stroke="${A}"/>
+      <circle cx="60" cy="60" r="10"/><path d="M60 70v20"/><path d="M60 90h32"/>
+      <path d="M64 74l12 20" stroke="${A}"/><path d="M36 96h24"/>`)
+  },
+  inclinepress:{
+    side: sv(`${shroud(140)}${pin(128,58)}<path d="M24 110h68"/><path d="M40 110V84"/>
+      <path d="M40 84l44-28"/><path d="M40 94h30"/><path d="M84 56v-8" stroke="${A}"/>
+      <path d="M84 48h28" stroke="${A}"/><path d="M112 48v60"/>`),
+    setup: sv(`<path d="M32 110h104"/><path d="M50 110V86"/><path d="M50 86l38-26"/>
+      <circle cx="92" cy="50" r="10"/><path d="M84 62h22" stroke="${A}"/>
+      <path d="M106 62l14-14" stroke="${A}"/><path d="M120 48v22"/><path d="M50 96h26"/>`)
+  },
+  legextension:{
+    side: sv(`${shroud(140)}${pin(128,58)}<path d="M22 108h70"/><path d="M40 108V78h36"/>
+      <path d="M40 78V50"/><path d="M76 78l28-6" stroke="${A}"/><path d="M104 72V56" stroke="${A}"/>
+      <path d="M94 56h20"/><path d="M114 108V62"/>`),
+    setup: sv(`<path d="M30 108h108"/><path d="M52 108V70h34"/><path d="M52 70V42"/>
+      <circle cx="64" cy="32" r="10"/><path d="M86 70l24-4" stroke="${A}"/>
+      <path d="M110 66V50" stroke="${A}"/><path d="M100 50h20"/><path d="M86 64h14"/>`)
+  },
+  calf:{
+    side: sv(`${shroud(140)}${pin(128,62)}<path d="M18 112h80"/><path d="M34 112V86h34"/>
+      <path d="M34 86V60"/><path d="M68 86h30" stroke="${A}"/><path d="M98 86V66" stroke="${A}"/>
+      <path d="M80 112V98h32"/>`),
+    setup: sv(`<path d="M26 112h112"/><path d="M46 112V80h34"/><path d="M46 80V52"/>
+      <circle cx="58" cy="42" r="10"/><path d="M80 80h30" stroke="${A}"/>
+      <path d="M110 80V60" stroke="${A}"/><path d="M92 112V100h30"/><path d="M92 100l18-8" stroke="${A}"/>`)
+  },
+  treadmill:{
+    side: sv(`<path d="M20 108h132"/><path d="M34 100h96" stroke="${A}"/>
+      <path d="M34 100v-6h96v6"/><path d="M126 94V44"/><path d="M126 44h-24"/>
+      <rect x="96" y="24" width="34" height="20" rx="3" stroke="${L}"/>
+      <path d="M102 60h26" stroke="${A}"/><path d="M44 108v-8M120 108v-8"/>`),
+    setup: sv(`<path d="M18 110h140"/><path d="M30 102h100" stroke="${A}"/>
+      <path d="M124 96V46"/><rect x="98" y="26" width="32" height="20" rx="3" stroke="${L}"/>
+      <circle cx="66" cy="42" r="10"/><path d="M66 52v22"/>
+      <path d="M66 74l-14 26M66 74l16 20" stroke="${A}"/><path d="M56 62l-14 10M76 62l16 4"/>`)
+  }
+};
+const OURA_ART=`<svg viewBox="0 0 180 130" xmlns="http://www.w3.org/2000/svg" fill="none"
+  stroke-linecap="round" stroke-linejoin="round"><g stroke="#8B96A2" stroke-width="4">
+  <ellipse cx="62" cy="65" rx="26" ry="34"/><ellipse cx="62" cy="65" rx="15" ry="22"/>
+  <path d="M96 66h12l7-16 9 34 8-24 6 12h22" stroke="#F2B01E"/></g></svg>`;
+const TREADMILL={
+  n:'Treadmill', m:'treadmill',
+  p:'Precor TRM series — Experience / Assurance line',
+  model:'TRM 425 / 445 / 731 · cardio',
+  url:'https://www.precor.com/en-US/cardio/treadmills',
+  steps:['Run it after the weights — lifting first gets your fresh energy, which is where the muscle is built.',
+         'Zone 2 means conversational: you could hold a sentence, but you’d rather not.',
+         '1–2% incline makes a flat belt feel closer to running outdoors.',
+         'Distance and time are what get logged — pace is worked out for you.']
+};
+function stackSVG(pct){
+  const rows=10, top=6, h=5.6, gap=.9;
+  const filled=Math.max(1,Math.min(rows,Math.round(pct*rows)));
+  let plates='';
+  for(let i=0;i<rows;i++){
+    const y=top+i*(h+gap), on=i<filled;
+    plates+=`<rect x="4" y="${y}" width="14" height="${h}" rx="1.4" fill="${on?'#39424C':'#20262D'}"
+      stroke="${on?'#4B5661':'#2C333B'}" stroke-width="1"/>`;
+  }
+  const py=top+(filled-1)*(h+gap)+h/2;
+  return `<svg viewBox="0 0 26 74" xmlns="http://www.w3.org/2000/svg">
+    <rect x="10.4" y="0" width="1.6" height="${top}" fill="#4B5661"/>${plates}
+    <g class="pinmark" transform="translate(0,${py-3.2})">
+      <rect x="16" y="1.4" width="8" height="3.6" rx="1.8" fill="#F2B01E"/>
+      <circle cx="17.6" cy="3.2" r="2.6" fill="#F2B01E"/></g></svg>`;
+}
+
+/* ===================== THE PLAN ===================== */
+const PRECOR_STRENGTH='https://www.precor.com/en-US/strength/selectorized';
+const PLAN={
+ A:{name:'Full Body A', ex:[
+  {id:'legpress',n:'Leg press',m:'legpress',sets:3,lo:8,hi:12,
+   p:'Precor Vitality — Leg Press / Calf Extension',model:'VSL010BP · selectorized',
+   url:'https://www.precor.com/en-US/strength/selectorized/vitality',
+   c:'Sit angled back, push the platform away. Knees track over toes, never lock out.',
+   steps:['Set the ratcheting seat back so your knees start bent about 90°.',
+          'Feet shoulder-width, mid-platform, whole foot in contact.',
+          'Push through the whole foot; stop just short of locking the knees.',
+          'Lower under control until your knees reach ~90° again.']},
+  {id:'chestpress',n:'Chest press',m:'chestpress',sets:3,lo:8,hi:12,
+   p:'Precor Resolute — Converging Chest Press',model:'Resolute selectorized',
+   url:'https://www.precor.com/en-US/strength/selectorized/resolute',
+   c:'Handles at mid-chest height. Press straight forward, don’t shrug.',
+   steps:['Raise or lower the seat until the handles sit level with your mid-chest.',
+          'Use the adjustable back pad to set a comfortable stretch at the start.',
+          'Press forward until the arms nearly converge; keep the shoulders down.',
+          'Return slowly — about two seconds — to the stretched position.']},
+  {id:'latpulldown',n:'Lat pulldown',m:'latpulldown',sets:3,lo:8,hi:12,
+   p:'Precor Resolute — Diverging Lat Pulldown',model:'RSL0314',
+   url:'https://www.precor.com/en-US/products/RSL0314',
+   c:'Thighs locked under the pad. Pull to your collarbone, elbows down not back.',
+   steps:['Set the thigh pad snug so you don’t lift off the seat.',
+          'Grip slightly wider than shoulders; the independent arms let you go one side at a time.',
+          'Pull down to your collarbone, driving the elbows toward your hips.',
+          'Let it rise all the way up for a full stretch at the top.']},
+  {id:'legcurl',n:'Seated leg curl',m:'legcurl',sets:3,lo:10,hi:12,
+   p:'Precor Resolute — Seated Leg Curl',model:'RSL0619',
+   url:'https://www.precor.com/en-US/products/RSL0619',
+   c:'Ankle pad just above the heels. Curl down hard, release slowly.',
+   steps:['Line your knee up with the machine’s pivot point using the back pad.',
+          'Lower the thigh pad so your legs stay put.',
+          'Ankle roller sits just above the heel, on the Achilles.',
+          'Curl down, pause a beat, and let it back up over two seconds.']},
+  {id:'shoulderpress',n:'Shoulder press',m:'shoulderpress',sets:3,lo:10,hi:12,
+   p:'Precor Vitality / Resolute — Shoulder Press',model:'selectorized',url:PRECOR_STRENGTH,
+   c:'Press overhead without shrugging. Stop just short of locking out.',
+   steps:['Seat height so the handles start at about ear level.',
+          'Ribs down, back flat against the pad.',
+          'Press up and slightly in; keep the shoulders away from the ears.',
+          'Lower until the elbows are just below shoulder height.']},
+  {id:'pushdown',n:'Cable triceps pushdown',m:'cable',sets:2,lo:12,hi:15,
+   p:'Cable crossover / functional trainer — high pulley',model:'rope or straight bar',url:PRECOR_STRENGTH,
+   c:'Elbows pinned to your sides, only the forearms move.',
+   steps:['Set the pulley to the top and clip on a rope or short bar.',
+          'Stand a step back, slight forward lean, elbows tucked.',
+          'Push down until the arms are straight, squeeze for a beat.',
+          'Let it come up only until the elbows bend to 90°.']},
+  {id:'core',n:'Cable or hanging core',m:'core',sets:3,lo:12,hi:15,
+   p:'Cable station (kneeling crunch) or captain’s chair',model:'—',url:PRECOR_STRENGTH,
+   c:'Slow and controlled — no swinging. Curl the ribs toward the hips.',
+   steps:['Kneel facing away from a high cable with the rope behind your head.',
+          'Hinge at the ribs, not the hips — think “curl,” not “bow.”',
+          'Squeeze at the bottom for one second.',
+          'Return under control; stop before your back arches.']}
+ ]},
+ B:{name:'Full Body B', ex:[
+  {id:'hacksquat',n:'Hack squat',m:'hacksquat',sets:3,lo:6,hi:10,
+   p:'Precor Discovery — Plate-Loaded Hack Squat',model:'Discovery plate-loaded',
+   url:'https://www.precor.com/en-US/strength/plate-loaded/discovery/all',
+   c:'Back flat on the pad, sit down between your heels. Heaviest lift of the week.',
+   steps:['Shoulders under the pads, back and hips flat against the backrest.',
+          'Feet mid-platform, shoulder-width, toes slightly out.',
+          'Unlock the safety catches, sit down until your thighs are parallel.',
+          'Drive up through mid-foot; re-set the catches before you step out.']},
+  {id:'cablerow',n:'Seated cable row',m:'cablerow',sets:3,lo:8,hi:12,
+   p:'Precor Resolute — Diverging Seated Row',model:'RSL0310',
+   url:'https://www.precor.com/en-US/products/RSL0310',
+   c:'Chest tall, pull to your belly, squeeze the shoulder blades.',
+   steps:['Chest against the pad (or feet braced on the platform), knees soft.',
+          'Start with the arms straight and let the shoulder blades stretch forward.',
+          'Pull the handles to your lower ribs, elbows close to the body.',
+          'Hold the squeeze for a beat, then release slowly.']},
+  {id:'inclinepress',n:'Incline chest press',m:'inclinepress',sets:3,lo:8,hi:12,
+   p:'Precor Discovery — Incline Press',model:'Discovery plate-loaded',
+   url:'https://www.precor.com/en-US/strength/plate-loaded/discovery/all',
+   c:'Angled press for the upper chest. Expect less weight than the flat press.',
+   steps:['Seat set so the handles sit just above your armpits.',
+          'Feet planted, back flat, wrists stacked over the elbows.',
+          'Press up and slightly forward along the machine’s path.',
+          'Lower until you feel a stretch across the upper chest — no bouncing.']},
+  {id:'legextension',n:'Leg extension',m:'legextension',sets:3,lo:12,hi:15,
+   p:'Precor Resolute — Leg Extension',model:'Resolute selectorized',
+   url:'https://www.precor.com/en-US/strength/selectorized/resolute',
+   c:'Pause at the top, lower under control.',
+   steps:['Back pad set so your knee lines up with the pivot.',
+          'Ankle pad rests on the front of the shin, just above the foot.',
+          'Straighten the legs fully and hold for one second.',
+          'Lower slowly — resist the whole way down.']},
+  {id:'lateral',n:'Cable lateral raise',m:'cable',sets:3,lo:12,hi:15,
+   p:'Cable crossover, low pulley — one arm at a time',model:'single handle',url:PRECOR_STRENGTH,
+   c:'Lead with the elbow, stop at shoulder height. Light weight beats momentum.',
+   steps:['Pulley at the lowest setting; stand side-on, cable crossing in front of you.',
+          'Handle in the far hand, slight bend in the elbow.',
+          'Raise out to the side until the arm is level with the shoulder.',
+          'Lower slowly. If you have to heave it, it’s too heavy.']},
+  {id:'curl',n:'Cable biceps curl',m:'cable',sets:2,lo:12,hi:15,
+   p:'Cable crossover, low pulley + straight bar',model:'straight or EZ bar',url:PRECOR_STRENGTH,
+   c:'Elbows still, no swinging the torso.',
+   steps:['Low pulley, straight bar, stand a step back so there’s tension at the bottom.',
+          'Elbows tucked against your ribs and staying there.',
+          'Curl up, squeeze, and control the way down.',
+          'Keep the torso quiet — if it rocks, drop a pin.']},
+  {id:'calf',n:'Calf raise',m:'calf',sets:3,lo:12,hi:15,
+   p:'Precor Vitality — Leg Press / Calf Extension',model:'VSL010BP · or seated calf',
+   url:'https://www.precor.com/en-US/strength/selectorized/vitality',
+   c:'Full stretch at the bottom, hold the top for a second.',
+   steps:['Balls of the feet on the edge of the platform, heels hanging free.',
+          'Let the heels drop for a full stretch.',
+          'Press up onto the toes as high as you can, pause one second.',
+          'Lower slowly — this one rewards patience, not weight.']}
+ ]}
+};
+const DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const DOWFULL=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+/* ===================== DATES & STATE ===================== */
+const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const today=new Date(); today.setHours(0,0,0,0);
+function mondayOf(d){const x=new Date(d);x.setDate(x.getDate()-((x.getDay()+6)%7));x.setHours(0,0,0,0);return x;}
+let weekStart=mondayOf(today), selected=iso(today);
+const eventsFor=ds=>DB.events.filter(e=>e.date===ds).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+
+/* which mode is this day in? explicit choice wins; else the default template */
+function modeOf(ds){
+  const l=DB.logs[ds];
+  if(l && l.mode) return l.mode;
+  const dow=new Date(ds+'T12:00').getDay();
+  return (dow===2||dow===4) ? 'lift' : 'class';
+}
+/* alternate A/B off the most recent individual session before this day */
+function nextPlan(ds){
+  const prior=Object.keys(DB.logs).filter(d=>d<ds && DB.logs[d].mode==='lift' && DB.logs[d].plan).sort();
+  if(prior.length) return DB.logs[prior[prior.length-1]].plan==='A' ? 'B' : 'A';
+  const dow=new Date(ds+'T12:00').getDay();
+  return dow===4 ? 'B' : 'A';
+}
+function planOf(ds){
+  const l=DB.logs[ds];
+  if(l && l.mode==='lift' && l.plan) return l.plan;
+  return nextPlan(ds);
+}
+function ensureLog(ds){
+  const l=DB.logs[ds]||{};
+  DB.logs[ds]=l;
+  l.mode=l.mode||modeOf(ds);
+  if(l.mode==='lift'){ l.plan=l.plan||nextPlan(ds); l.sets=l.sets||{}; }
+  if(l.mode==='class'){ l.classes=l.classes||{}; }
+  return l;
+}
+function setMode(ds,mode){
+  const l=DB.logs[ds]||{}; DB.logs[ds]=l;
+  l.mode=mode;
+  if(mode==='lift' && !l.plan) l.plan=nextPlan(ds);
+  if(mode==='lift'){ l.sets=l.sets||{}; }
+  else { l.classes=l.classes||{}; }
+  persist(); render();
+}
+function lastPerf(exId,ds){
+  const days=Object.keys(DB.logs).filter(d=>d<ds && DB.logs[d].sets && DB.logs[d].sets[exId]).sort();
+  for(let i=days.length-1;i>=0;i--){
+    const sets=DB.logs[days[i]].sets[exId].filter(s=>s.w||s.r);
+    if(sets.length) return {date:days[i],sets};
+  }
+  return null;
+}
+function topWeight(id){
+  let m=0;
+  Object.values(DB.logs).forEach(l=>(l.sets&&l.sets[id]||[]).forEach(s=>{ if(+s.w>m) m=+s.w; }));
+  return m;
+}
+
+/* ===================== SESSION CLOCK =====================
+   An explicit start/stop, so the logged duration is the real one — and so the
+   Oura heart-rate window matches what you actually did. */
+function sessionState(ds){
+  const l=DB.logs[ds];
+  if(!l||!l.startedAt) return 'idle';
+  if(!l.finishedAt) return 'running';
+  return 'done';
+}
+function durationMin(l){
+  if(!l||!l.startedAt||!l.finishedAt) return 0;
+  return Math.max(1, Math.round((new Date(l.finishedAt)-new Date(l.startedAt))/60000));
+}
+function elapsedSec(l){
+  if(!l||!l.startedAt) return 0;
+  const end=l.finishedAt?new Date(l.finishedAt):new Date();
+  return Math.max(0, Math.floor((end-new Date(l.startedAt))/1000));
+}
+const hms=sec=>{
+  const h=Math.floor(sec/3600), m=Math.floor(sec%3600/60), x=sec%60;
+  return h ? `${h}:${String(m).padStart(2,'0')}:${String(x).padStart(2,'0')}`
+           : `${m}:${String(x).padStart(2,'0')}`;
+};
+function startSession(ds){
+  const l=ensureLog(ds);
+  l.startedAt=new Date().toISOString();
+  delete l.finishedAt; l.done=false;
+  persist(); render(); tickClock();
+}
+async function stopSession(ds){
+  const l=ensureLog(ds);
+  if(!l.startedAt) return;
+  l.finishedAt=new Date().toISOString();
+  l.done=true;
+  const mins=durationMin(l);
+  // a class with no duration typed gets the one we just measured
+  if(l.mode==='class' && l.classes){
+    Object.values(l.classes).forEach(c=>{ if(c.done && !c.min) c.min=String(mins); });
+  }
+  persist(); render();
+  if(ouraOn()){ try{ await ouraPull(ds); render(); }catch(e){ /* the Oura card explains */ } }
+}
+function resumeSession(ds){
+  const l=ensureLog(ds);
+  delete l.finishedAt; l.done=false;
+  persist(); render(); tickClock();
+}
+let clockTimer=null;
+function tickClock(){
+  clearInterval(clockTimer);
+  clockTimer=setInterval(()=>{
+    if(sessionState(selected)!=='running' && restLeft<=0){ clearInterval(clockTimer); return; }
+    renderBar();
+    const el=document.getElementById('elapsedbig');
+    if(el) el.textContent=hms(elapsedSec(DB.logs[selected]));
+  },1000);
+}
+
+/* ===================== RENDER ===================== */
+let view='week';
+function render(){
+  const week = view==='week';
+  document.getElementById('strip').style.display = week?'grid':'none';
+  document.getElementById('weeknav').style.display = week?'flex':'none';
+  document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.view===view));
+  if(week){ renderStrip(); renderDay(); }
+  else renderHistory();
+  renderBar();
+}
+
+/* ---------- history maths ---------- */
+const EX_INDEX={};
+['A','B'].forEach(k=>PLAN[k].ex.forEach(e=>EX_INDEX[e.id]=e));
+
+function sessionVolume(l){
+  let v=0, sets=0, reps=0;
+  Object.values(l.sets||{}).forEach(arr=>arr.forEach(s=>{
+    if(s.w && s.r){ v += (+s.w)*(+s.r); sets++; reps += +s.r; }
+  }));
+  return {v,sets,reps};
+}
+function allSessions(){
+  return Object.keys(DB.logs).filter(d=>{
+    const l=DB.logs[d];
+    if(l.mode==='lift') return sessionVolume(l).sets>0 || l.done || (l.run && +l.run.dist>0);
+    if(l.mode==='class') return l.classes && Object.values(l.classes).some(c=>c.done);
+    return false;
+  }).sort().reverse();
+}
+function timeTotals(){
+  let mins=0, n=0;
+  Object.keys(DB.logs).forEach(ds=>{
+    const m=durationMin(DB.logs[ds]);
+    if(m){ mins+=m; n++; }
+  });
+  return {mins, n, avg: n?Math.round(mins/n):0};
+}
+function ouraTotals(){
+  const hrs=[], kcal=[];
+  Object.values(DB.logs).forEach(l=>{
+    if(l.oura && l.oura.hr && l.oura.hr.avg) hrs.push(l.oura.hr.avg);
+    const w=l.oura && (l.oura.workouts||[])[0];
+    if(w && w.calories) kcal.push(w.calories);
+  });
+  return {
+    n:hrs.length,
+    avgHR: hrs.length ? Math.round(hrs.reduce((a,b)=>a+b,0)/hrs.length) : 0,
+    kcal: kcal.reduce((a,b)=>a+b,0),
+  };
+}
+function runTotals(){
+  let dist=0, min=0, runs=0;
+  Object.values(DB.logs).forEach(l=>{
+    if(l.run && +l.run.dist>0){ dist+=+l.run.dist; min+=+l.run.min||0; runs++; }
+  });
+  return {dist,min,runs};
+}
+function classInfo(ds){
+  const l=DB.logs[ds];
+  const done=Object.entries(l.classes||{}).filter(([,c])=>c.done);
+  const names=done.map(([uid])=>{ const e=DB.events.find(e=>e.uid===uid); return e?e.title:'Class'; });
+  const mins=done.reduce((a,[,c])=>a+(+c.min||0),0);
+  const rpe=done.map(([,c])=>+c.rpe).filter(Boolean);
+  return {names,mins,rpe:rpe.length?(rpe.reduce((a,b)=>a+b,0)/rpe.length):0,count:done.length};
+}
+/* best top-set weight per session, per exercise — the progression series */
+function series(exId){
+  return Object.keys(DB.logs).filter(d=>DB.logs[d].sets && DB.logs[d].sets[exId]).sort()
+    .map(d=>{
+      const done=DB.logs[d].sets[exId].filter(s=>s.w && s.r);
+      if(!done.length) return null;
+      const top=done.reduce((a,b)=> (+b.w > +a.w ? b : a));
+      const e1rm=Math.round((+top.w)*(1 + (+top.r)/30)); // Epley
+      return {date:d, w:+top.w, r:+top.r, e1rm, vol:done.reduce((a,s)=>a+(+s.w)*(+s.r),0)};
+    }).filter(Boolean);
+}
+function sparkline(pts){
+  if(pts.length<2) return `<svg viewBox="0 0 78 26"><line x1="0" y1="20" x2="78" y2="20" stroke="#2C333B" stroke-width="2"/></svg>`;
+  const vals=pts.map(p=>p.e1rm), min=Math.min(...vals), max=Math.max(...vals);
+  const span=(max-min)||1;
+  const x=i=>2+i*(74/(pts.length-1)), y=v=>23-((v-min)/span)*19;
+  const d=vals.map((v,i)=>`${i?'L':'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ');
+  const up=vals[vals.length-1]>=vals[0];
+  const col=up?'#68C97F':'#8B96A2';
+  return `<svg viewBox="0 0 78 26" fill="none">
+    <path d="${d}" stroke="${col}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="${x(vals.length-1).toFixed(1)}" cy="${y(vals[vals.length-1]).toFixed(1)}" r="2.6" fill="${col}"/></svg>`;
+}
+function weekBuckets(n){
+  const out=[];
+  for(let i=n-1;i>=0;i--){
+    const start=new Date(mondayOf(today)); start.setDate(start.getDate()-i*7);
+    const end=new Date(start); end.setDate(end.getDate()+6); end.setHours(23,59,59);
+    let vol=0, lifts=0, classes=0, mins=0;
+    Object.keys(DB.logs).forEach(ds=>{
+      const d=new Date(ds+'T12:00');
+      if(d<start||d>end) return;
+      const l=DB.logs[ds];
+      if(l.mode==='lift'){ const s=sessionVolume(l); if(s.sets){ vol+=s.v; lifts++; } }
+      if(l.mode==='class'){ const c=classInfo(ds); if(c.count){ classes+=c.count; mins+=c.mins; } }
+    });
+    out.push({start,vol,lifts,classes,mins,label:start.toLocaleDateString(undefined,{month:'numeric',day:'numeric'})});
+  }
+  return out;
+}
+function volumeChart(weeks){
+  const W=480,H=150,pad=22;
+  const max=Math.max(...weeks.map(w=>w.vol),1);
+  const bw=(W-pad*2)/weeks.length;
+  let bars='', labels='';
+  weeks.forEach((w,i)=>{
+    const h=Math.max(w.vol?4:0,(w.vol/max)*(H-46));
+    const x=pad+i*bw+bw*0.18, y=H-24-h, ww=bw*0.64;
+    bars+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${ww.toFixed(1)}" height="${h.toFixed(1)}" rx="3"
+      fill="${w.vol?'#F2B01E':'#252B32'}" fill-opacity="${w.vol?'.85':'1'}"/>`;
+    if(w.classes) bars+=`<circle cx="${(x+ww/2).toFixed(1)}" cy="${(H-14).toFixed(1)}" r="3" fill="#54BFF0"/>`;
+    labels+=`<text x="${(x+ww/2).toFixed(1)}" y="${H-2}" fill="#8B96A2" font-size="8"
+      font-family="IBM Plex Mono, monospace" text-anchor="middle">${w.label}</text>`;
+  });
+  const top=`<text x="${pad}" y="12" fill="#8B96A2" font-size="9" font-family="IBM Plex Mono, monospace">
+    peak ${Math.round(max).toLocaleString()} ${DB.settings.unit}</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}">${top}
+    <line x1="${pad}" y1="${H-24}" x2="${W-pad}" y2="${H-24}" stroke="#2C333B" stroke-width="1"/>
+    ${bars}${labels}</svg>`;
+}
+
+/* ---------- deleting a session (with a way back) ---------- */
+let undoBuf=null, undoTimer=null;
+function deleteSession(ds){
+  undoBuf={ds, log:JSON.parse(JSON.stringify(DB.logs[ds]))};
+  delete DB.logs[ds];
+  persist(); render();
+  showUndo(`Session deleted — ${new Date(ds+'T12:00').toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'})}`);
+}
+function undoDelete(){
+  if(!undoBuf) return;
+  DB.logs[undoBuf.ds]=undoBuf.log;
+  undoBuf=null;
+  hideUndo(); persist(); render();
+}
+function showUndo(text){
+  clearTimeout(undoTimer);
+  const el=document.getElementById('undo');
+  el.innerHTML=`<span>${text}</span><button class="btn sm ghost">Undo</button>`;
+  el.querySelector('button').onclick=undoDelete;
+  el.classList.add('on');
+  undoTimer=setTimeout(hideUndo, 7000);
+}
+function hideUndo(){
+  clearTimeout(undoTimer);
+  document.getElementById('undo').classList.remove('on');
+}
+
+function renderHistory(){
+  const main=document.getElementById('main');
+  main.innerHTML='';
+  const sessions=allSessions();
+
+  if(!sessions.length){
+    main.innerHTML=`<div class="empty" style="margin-top:24px"><b>Nothing logged yet</b>
+      Finish a session and this fills up: volume by week, weight progression on every machine,
+      and your running personal bests.</div>`;
+    return;
+  }
+
+  /* headline metrics */
+  const lifts=sessions.filter(d=>DB.logs[d].mode==='lift');
+  const classes=sessions.filter(d=>DB.logs[d].mode==='class');
+  const totalVol=lifts.reduce((a,d)=>a+sessionVolume(DB.logs[d]).v,0);
+  const totalSets=lifts.reduce((a,d)=>a+sessionVolume(DB.logs[d]).sets,0);
+  const classMins=classes.reduce((a,d)=>a+classInfo(d).mins,0);
+  const first=new Date(sessions[sessions.length-1]+'T12:00');
+  const weeksSpan=Math.max(1,Math.ceil((today-first)/6048e5)+ (0));
+  const perWeek=(sessions.length/weeksSpan).toFixed(1);
+  const last30=sessions.filter(d=>(today-new Date(d+'T12:00'))/864e5 <= 30).length;
+
+  const stats=document.createElement('div');
+  stats.className='stats';
+  const run=runTotals();
+  const avgPace = run.dist && run.min ? paceOf({dist:run.dist,min:run.min}) : '—';
+  stats.innerHTML=`
+    <div class="stat pin"><div class="v">${lifts.length}</div><div class="k">lift sessions · ${totalSets} sets</div></div>
+    <div class="stat studio"><div class="v">${classes.length}</div><div class="k">classes · ${classMins} min</div></div>
+    <div class="stat"><div class="v">${Math.round(totalVol).toLocaleString()}<small>${DB.settings.unit}</small></div>
+      <div class="k">total volume moved</div></div>
+    <div class="stat"><div class="v">${run.dist ? run.dist.toFixed(1) : '0'}<small>${DB.settings.dist||'mi'}</small></div>
+      <div class="k">treadmill · ${run.runs} run${run.runs===1?'':'s'} · avg ${avgPace}</div></div>
+    <div class="stat"><div class="v">${perWeek}<small>/wk</small></div>
+      <div class="k">${last30} sessions in the last 30 days</div></div>
+    ${(()=>{ const t=timeTotals(); return t.n ? `
+    <div class="stat"><div class="v">${(t.mins/60).toFixed(1)}<small>hrs</small></div>
+      <div class="k">time training · avg ${t.avg} min a session</div></div>` : ''; })()}
+    <div class="stat"><div class="v">${run.min}<small>min</small></div>
+      <div class="k">time on the treadmill</div></div>
+    ${(()=>{ const o=ouraTotals(); return o.n ? `
+    <div class="stat"><div class="v">${o.avgHR}<small>bpm</small></div>
+      <div class="k">avg session heart rate · Oura · ${o.n} session${o.n===1?'':'s'}</div></div>
+    <div class="stat"><div class="v">${o.kcal.toLocaleString()}<small>kcal</small></div>
+      <div class="k">burned in logged sessions</div></div>` : ''; })()}`;
+  main.appendChild(stats);
+
+  /* weekly volume */
+  const h1=document.createElement('div'); h1.className='hsec'; h1.textContent='Volume by week';
+  main.appendChild(h1);
+  const weeks=weekBuckets(8);
+  const box=document.createElement('div');
+  box.className='panelbox';
+  box.innerHTML=volumeChart(weeks)+
+    `<div class="legend"><span><i style="background:#F2B01E"></i>weight moved (sets × reps × load)</span>
+     <span><i style="background:#54BFF0;border-radius:50%"></i>class that week</span></div>`;
+  main.appendChild(box);
+
+  /* per-exercise progression */
+  const h2=document.createElement('div'); h2.className='hsec'; h2.textContent='Progression by machine';
+  main.appendChild(h2);
+  let any=false;
+  Object.keys(EX_INDEX).forEach(id=>{
+    const s=series(id);
+    if(!s.length) return;
+    any=true;
+    const ex=EX_INDEX[id];
+    const best=s.reduce((a,b)=> b.w>a.w?b:a);
+    const delta=s.length>1 ? s[s.length-1].e1rm - s[0].e1rm : 0;
+    const row=document.createElement('div');
+    row.className='exrow';
+    row.innerHTML=`
+      <div class="en"><b>${ex.n}</b>
+        <span>${s.length} session${s.length>1?'s':''} · last ${s[s.length-1].w}×${s[s.length-1].r}</span></div>
+      <div class="spark">${sparkline(s)}</div>
+      <div class="pr"><b>${best.w} ${DB.settings.unit}</b>
+        <span class="${delta>0?'':'flat'}">${delta>0?'+'+delta:(delta<0?delta:'—')} est 1RM</span></div>`;
+    main.appendChild(row);
+  });
+  if(!any){
+    const e=document.createElement('div'); e.className='empty';
+    e.innerHTML=`<b>No lifts logged yet</b>Weight and reps from your first individual session start the trend line.`;
+    main.appendChild(e);
+  }
+
+  /* session log */
+  const h3=document.createElement('div'); h3.className='hsec'; h3.textContent='Sessions';
+  main.appendChild(h3);
+  sessions.slice(0,30).forEach(ds=>{
+    const l=DB.logs[ds];
+    const d=new Date(ds+'T12:00');
+    const when=d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
+    const row=document.createElement('div');
+    row.className='sess';
+    const render_row=()=>{
+    if(l.mode==='lift'){
+      const s=sessionVolume(l);
+      const rd = l.run && +l.run.dist>0 ? ` · ${l.run.dist} ${DB.settings.dist||'mi'} run` : '';
+      const hr = l.oura && l.oura.hr ? ` · ${l.oura.hr.avg} bpm` : '';
+      const dm = durationMin(l) ? ` · ${durationMin(l)} min` : '';
+      row.innerHTML=`<div class="tag lift">${l.plan||'A'}</div>
+        <div class="sm"><b>Full Body ${l.plan||'A'}</b>
+          <span>${when}${dm} · ${s.sets} sets · ${Math.round(s.v).toLocaleString()} ${DB.settings.unit}${rd}${hr}</span></div>
+        <button class="del" aria-label="Delete session">🗑</button>`;
+    } else {
+      const c=classInfo(ds);
+      const chr = l.oura && l.oura.hr ? ` · ${l.oura.hr.avg} bpm` : '';
+      row.innerHTML=`<div class="tag class">C</div>
+        <div class="sm"><b>${c.names.join(', ')||'Class'}</b>
+          <span>${when}${durationMin(l)?` · ${durationMin(l)} min`:(c.mins?` · ${c.mins} min`:'')}${c.rpe?` · RPE ${c.rpe.toFixed(0)}`:''}${chr}</span></div>
+        <button class="del" aria-label="Delete session">🗑</button>`;
+    }
+
+    row.querySelector('.sm').onclick=()=>{
+      selected=ds; weekStart=mondayOf(new Date(ds+'T12:00')); view='week'; render(); window.scrollTo({top:0});
+    };
+    row.querySelector('.del').onclick=e=>{
+      e.stopPropagation();
+      confirm_row();
+    };
+    };
+
+    const confirm_row=()=>{
+      row.classList.add('confirming');
+      row.innerHTML=`<div class="sm"><b>Delete this session?</b>
+          <span>${new Date(ds+'T12:00').toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'})} · sets, run and Oura data go with it</span></div>
+        <button class="btn sm ghost" data-a="no">Keep</button>
+        <button class="btn sm danger" data-a="yes">Delete</button>`;
+      row.querySelector('[data-a=no]').onclick=e=>{ e.stopPropagation(); row.classList.remove('confirming'); render_row(); };
+      row.querySelector('[data-a=yes]').onclick=e=>{ e.stopPropagation(); deleteSession(ds); };
+    };
+
+    render_row();
+    main.appendChild(row);
+  });
+
+  const hr=document.createElement('hr'); hr.className='rule'; main.appendChild(hr);
+
+  const h4=document.createElement('div'); h4.className='hsec'; h4.textContent='Backup';
+  main.appendChild(h4);
+  const bk=document.createElement('div');
+  bk.className='panelbox';
+  bk.innerHTML=`
+    <div style="display:flex;gap:8px">
+      <button class="btn ghost wide" id="exp">Export file</button>
+      <button class="btn ghost wide" id="impb">Restore file</button>
+    </div>
+    <input type="file" id="impf" accept="application/json,.json" style="display:none">
+    <div class="msg" id="bmsg"></div>
+    <div class="note">Export writes every session, run, class and machine photo into one file — save it to iCloud
+      Drive. Restore reads it back on any phone or browser, so a cleared cache or a new device never costs you
+      your history.</div>`;
+  main.appendChild(bk);
+  const bmsg=bk.querySelector('#bmsg');
+  bk.querySelector('#exp').onclick=()=>{
+    const blob=new Blob([JSON.stringify(DB,null,2)],{type:'application/json'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=`training-backup-${iso(new Date())}.json`;
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+    flash(bmsg,'Backup created — save it to iCloud Drive.','ok');
+  };
+  bk.querySelector('#impb').onclick=()=>bk.querySelector('#impf').click();
+  bk.querySelector('#impf').onchange=async e=>{
+    const f=e.target.files[0]; if(!f) return;
+    try{
+      const data=JSON.parse(await f.text());
+      if(!data || typeof data!=='object' || !data.logs) throw 0;
+      DB=Object.assign({logs:{},events:[],photos:{},settings:{unit:'lb',dist:'mi'}},data);
+      await Store.save(DB);
+      render();
+    }catch(err){ flash(bmsg,'That file isn’t a training backup.','err'); }
+  };
+
+  const foot=document.createElement('div');
+  foot.className='foot';
+  foot.innerHTML=`<b>Volume</b> is every logged set multiplied out (load × reps) — the number that should creep up
+    over months. <b>Est 1RM</b> uses the Epley formula on your top set, so it rises when you add weight
+    <i>or</i> squeeze out extra reps at the same weight. A flat spark line for several sessions is the signal
+    to add a pin.`;
+  main.appendChild(foot);
+}
+
+function renderStrip(){
+  const strip=document.getElementById('strip'), end=new Date(weekStart); end.setDate(end.getDate()+6);
+  const fmt=d=>d.toLocaleDateString(undefined,{month:'short',day:'numeric'});
+  document.getElementById('weeklabel').textContent=`${fmt(weekStart)} – ${fmt(end)}`;
+  strip.innerHTML='';
+  for(let i=0;i<7;i++){
+    const d=new Date(weekStart); d.setDate(d.getDate()+i);
+    const ds=iso(d), l=DB.logs[ds], cls=['daybtn', modeOf(ds)==='lift'?'lift':'class'];
+    if(l && l.done) cls.push('logged');
+    if(ds===iso(today)) cls.push('today');
+    if(ds===selected) cls.push('sel');
+    const b=document.createElement('button');
+    b.className=cls.join(' ');
+    b.innerHTML=`<span class="dow">${DOW[d.getDay()]}</span><span class="dnum">${d.getDate()}</span><span class="dot"></span>`;
+    b.onclick=()=>{ selected=ds; render(); window.scrollTo({top:0,behavior:'smooth'}); };
+    strip.appendChild(b);
+  }
+}
+
+function renderDay(){
+  const main=document.getElementById('main');
+  const mode=modeOf(selected), plan=planOf(selected);
+  const d=new Date(selected+'T12:00');
+  main.innerHTML='';
+
+  const st=sessionState(selected), lg=DB.logs[selected];
+  const head=document.createElement('div');
+  head.className='dayhead';
+  const durline = st==='running'
+    ? `<span class="live"><i></i>Session running · <b id="elapsedbig">${hms(elapsedSec(lg))}</b></span>`
+    : st==='done'
+      ? `<span class="dur">Logged · ${durationMin(lg)} min</span>`
+      : '';
+  head.innerHTML=`
+    <div class="eyebrow ${mode==='lift'?'pin':'studio'}">${mode==='lift'?'Individual training':'Class'}</div>
+    <h2>${DOWFULL[d.getDay()]}</h2>
+    <div class="sub">${d.toLocaleDateString(undefined,{month:'long',day:'numeric'})} ${durline}</div>
+    <div class="modes">
+      <button class="mode ${mode==='class'?'on':''}" data-mode="class">
+        <span class="mt">Class</span><span class="ms">from iCloud calendar</span></button>
+      <button class="mode ${mode==='lift'?'on':''}" data-mode="lift">
+        <span class="mt">Individual</span><span class="ms">weights · pick A or B</span></button>
+    </div>`;
+  head.querySelectorAll('.mode').forEach(b=> b.onclick=()=>setMode(selected,b.dataset.mode));
+  main.appendChild(head);
+
+  if(mode==='lift'){
+    const picker=document.createElement('div');
+    picker.className='picker';
+    picker.innerHTML=`
+      <div class="pickhead">Which session?</div>
+      <div class="picks">
+        ${['A','B'].map(k=>`
+          <button class="pick ${plan===k?'on':''}" data-plan="${k}">
+            <span class="pk">Full Body ${k}</span>
+            <span class="pl">${PLAN[k].ex.slice(0,3).map(e=>e.n).join(' · ')}…</span>
+          </button>`).join('')}
+      </div>`;
+    picker.querySelectorAll('.pick').forEach(b=> b.onclick=()=>{
+      const l=ensureLog(selected); l.plan=b.dataset.plan; persist(); render();
+    });
+    main.appendChild(picker);
+    renderLift(main, plan);
+  } else {
+    renderClasses(main);
+  }
+
+  const hr=document.createElement('hr'); hr.className='rule'; main.appendChild(hr);
+  const foot=document.createElement('div');
+  foot.className='foot';
+  foot.innerHTML=`Progressive overload is the engine: hit the <b>top of the rep range on every set</b> and add one pin
+    next time. Leave 1–2 reps in reserve on the compounds; the last isolation set can go close to failure.
+    Rest 1.5–3 min on the big lifts, 1–1.5 min on the small ones.<br><br>
+    General fitness guidance, not medical advice.`;
+  main.appendChild(foot);
+}
+
+function renderLift(main, planKey){
+  const l=ensureLog(selected);
+  PLAN[planKey].ex.forEach(ex=>{
+    l.sets[ex.id]=l.sets[ex.id]||Array.from({length:ex.sets},()=>({w:'',r:'',done:false}));
+    const rows=l.sets[ex.id], prev=lastPerf(ex.id,selected);
+    const card=document.createElement('div');
+    card.className='card'+(rows.some(s=>s.done)?' done':'');
+
+    const cur=+(rows.find(s=>s.w)?.w)||(prev?+prev.sets[0].w:0);
+    const max=Math.max(topWeight(ex.id),cur,1);
+    const pct=cur?Math.max(.1,Math.min(1,cur/max)):.1;
+    let badge='';
+    if(prev && prev.sets.length>=ex.sets && prev.sets.every(s=>+s.r>=ex.hi)) badge=`<span class="badge">Add weight</span>`;
+    const photo=DB.photos[ex.m];
+
+    card.innerHTML=`
+      <div class="cardtop">
+        <div class="machine">${photo?`<img src="${photo}" alt="">`:ART[ex.m].side}<span class="zoom">tap</span></div>
+        <div class="exmeta">
+          <div class="exname">${ex.n}</div>
+          <div class="precor">${ex.p}</div>
+          <div class="target">${ex.sets} × ${ex.lo}–${ex.hi} reps</div>
+          ${prev?`<div class="last">Last: ${prev.sets.map(s=>`${s.w||'—'}×${s.r||'—'}`).join('  ')}</div>`
+                :`<div class="last">No history yet — set a baseline</div>`}
+          ${badge}
+        </div>
+        <div class="stack">${stackSVG(pct)}<div class="stackval">${cur?cur+' '+DB.settings.unit:'—'}</div></div>
+      </div>
+      <div class="sets"><div class="cue">${ex.c}</div></div>`;
+
+    card.querySelector('.machine').onclick=e=>{ e.stopPropagation(); openMachine(ex); };
+    card.querySelector('.exmeta').onclick=()=>card.classList.toggle('open');
+
+    const setsEl=card.querySelector('.sets');
+    rows.forEach((s,i)=>{
+      const row=document.createElement('div');
+      row.className='setrow';
+      row.innerHTML=`<div class="setno">${i+1}</div>
+        <div class="field"><input type="number" inputmode="decimal" value="${s.w}" placeholder="0"><label>${DB.settings.unit}</label></div>
+        <div class="field"><input type="number" inputmode="numeric" value="${s.r}" placeholder="0"><label>reps</label></div>
+        <button class="tick ${s.done?'on':''}">✓</button>`;
+      const [wIn,rIn]=row.querySelectorAll('input');
+      wIn.oninput=()=>{ s.w=wIn.value; persist(); };
+      rIn.oninput=()=>{ s.r=rIn.value; persist(); };
+      wIn.onblur=rIn.onblur=()=>refreshStack(card,ex);
+      row.querySelector('.tick').onclick=e=>{
+        s.done=!s.done;
+        e.currentTarget.classList.toggle('on',s.done);
+        card.classList.toggle('done',rows.some(x=>x.done));
+        if(s.done && !s.w && prev){ s.w=prev.sets[Math.min(i,prev.sets.length-1)].w; wIn.value=s.w; }
+        if(s.done && !l.startedAt) startSession(selected);  // ticking a set starts the clock too
+        startRest(i<2 && ex.sets>2 ? 150 : 90);
+        persist(); refreshStack(card,ex); renderStrip();
+      };
+      setsEl.appendChild(row);
+    });
+    const rb=document.createElement('div');
+    rb.className='rowbtns';
+    rb.innerHTML=`<button class="btn sm ghost" data-a="rep">Repeat last</button>
+                  <button class="btn sm ghost" data-a="add">Add set</button>`;
+    rb.querySelector('[data-a=rep]').onclick=()=>{
+      if(!prev) return;
+      rows.forEach((s,i)=>{ const src=prev.sets[Math.min(i,prev.sets.length-1)]; s.w=src.w; s.r=src.r; });
+      persist(); renderDay();
+    };
+    rb.querySelector('[data-a=add]').onclick=()=>{ rows.push({w:'',r:'',done:false}); persist(); renderDay(); };
+    setsEl.appendChild(rb);
+    main.appendChild(card);
+  });
+  renderRun(main);
+  renderOura(main);
+}
+
+/* ---------- Oura: end-of-session readout ---------- */
+function renderOura(main){
+  const l=ensureLog(selected);
+  const o=l.oura;
+  const card=document.createElement('div');
+  card.className='card ouracard'+(o?' done':'');
+
+  const win = l.startedAt && l.finishedAt
+    ? `${new Date(l.startedAt).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})}–${new Date(l.finishedAt).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})}`
+    : null;
+
+  let readout='';
+  if(o){
+    const w=(o.workouts||[])[0];
+    readout=`
+      <div class="oreadout">
+        ${o.hr?`<div class="ostat"><b>${o.hr.avg}</b><span>avg bpm</span></div>
+                <div class="ostat"><b>${o.hr.max}</b><span>peak bpm</span></div>`:''}
+        ${w&&w.calories!=null?`<div class="ostat"><b>${w.calories}</b><span>kcal</span></div>`:''}
+        ${o.activity&&o.activity.steps!=null?`<div class="ostat"><b>${o.activity.steps.toLocaleString()}</b><span>steps today</span></div>`:''}
+        ${o.activity&&o.activity.score!=null?`<div class="ostat"><b>${o.activity.score}</b><span>activity score</span></div>`:''}
+      </div>
+      ${w?`<div class="cue" style="margin-top:8px">Oura logged this as <b>${w.activity}</b>${w.label?` (${w.label})`:''}${w.intensity?` · ${w.intensity} intensity`:''}${w.distance?` · ${metresToMiles(w.distance)} mi`:''}.</div>`:''}`;
+  }
+
+  card.innerHTML=`
+    <div class="cardtop">
+      <div class="machine oura">${OURA_ART}</div>
+      <div class="exmeta">
+        <div class="exname">Oura</div>
+        <div class="precor">${ouraOn()?'connected':'not connected'}</div>
+        <div class="last">${o
+          ? `Pulled ${new Date(o.pulledAt).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})}`
+          : (win ? `Session window ${win}` : 'Tick a set to start the clock')}</div>
+      </div>
+    </div>
+    <div class="sets">
+      ${readout}
+      <div class="msg" id="omsg"></div>
+      <div class="rowbtns" style="margin-top:10px">
+        ${ouraOn()
+          ? `<button class="btn sm primary" id="opull">${o?'Pull again':'Pull from Oura'}</button>
+             <button class="btn sm ghost" id="odis">Disconnect</button>`
+          : `<button class="btn sm primary" id="ocon">Connect Oura</button>`}
+      </div>
+      <div class="cue" style="margin-top:10px">Heart rate is read for the exact window between your first
+        logged set and Finish session — so it's a workout number, not a whole-day average.</div>
+    </div>`;
+
+  card.querySelector('.cardtop').onclick=()=>card.classList.toggle('open');
+  const om=card.querySelector('#omsg');
+  const con=card.querySelector('#ocon');
+  if(con) con.onclick=ouraConnect;
+  const dis=card.querySelector('#odis');
+  if(dis) dis.onclick=ouraDisconnect;
+  const pull=card.querySelector('#opull');
+  if(pull) pull.onclick=async()=>{
+    flash(om,'Asking Oura…','');
+    try{
+      await ouraPull(selected);
+      render();
+    }catch(e){
+      if(e.message==='reauth'){ flash(om,'Oura needs you to sign in again.','err'); delete DB.settings.oura; persist(); }
+      else flash(om,e.message,'err');
+    }
+  };
+  main.appendChild(card);
+}
+
+/* ---------- treadmill run, on both A and B ---------- */
+function lastRun(ds){
+  const days=Object.keys(DB.logs).filter(d=>d<ds && DB.logs[d].run && +DB.logs[d].run.dist>0).sort();
+  return days.length ? Object.assign({date:days[days.length-1]}, DB.logs[days[days.length-1]].run) : null;
+}
+function paceOf(run){
+  const dist=+run.dist, min=+run.min;
+  if(!dist || !min) return '';
+  const p=min/dist, m=Math.floor(p), s=Math.round((p-m)*60);
+  return `${m}:${String(s).padStart(2,'0')} /${DB.settings.dist||'mi'}`;
+}
+function renderRun(main){
+  const l=ensureLog(selected);
+  l.run=l.run||{dist:'',min:'',incline:'',done:false};
+  const r=l.run, prev=lastRun(selected);
+  const card=document.createElement('div');
+  card.className='card runcard'+(r.done?' done':'');
+  const pace=paceOf(r);
+
+  card.innerHTML=`
+    <div class="cardtop">
+      <div class="machine">${ART.treadmill.side}<span class="zoom">tap</span></div>
+      <div class="exmeta">
+        <div class="exname">Treadmill</div>
+        <div class="precor">Precor TRM series — after the lifts</div>
+        <div class="target">${r.dist?`${r.dist} ${DB.settings.dist||'mi'}${r.min?` · ${r.min} min`:''}`:'log the run'}</div>
+        ${prev?`<div class="last">Last: ${prev.dist} ${DB.settings.dist||'mi'} in ${prev.min||'—'} min</div>`
+              :`<div class="last">No run logged yet</div>`}
+        ${pace?`<span class="badge ok">${pace}</span>`:''}
+      </div>
+      <div class="stack" style="flex:0 0 40px">
+        <div class="runbig">${r.dist||'—'}</div>
+        <div class="stackval">${DB.settings.dist||'mi'}</div>
+      </div>
+    </div>
+    <div class="sets">
+      <div class="cue">Zone 2 pace — conversational, nose-breathing. Run after the weights, not before,
+        so the lifting gets your fresh energy.</div>
+      <div class="setrow" style="grid-template-columns:1fr 1fr 1fr">
+        <div class="field"><input type="number" inputmode="decimal" class="rd" value="${r.dist}" placeholder="0"><label>${DB.settings.dist||'mi'}</label></div>
+        <div class="field"><input type="number" inputmode="numeric" class="rm" value="${r.min}" placeholder="0"><label>min</label></div>
+        <div class="field"><input type="number" inputmode="decimal" class="ri" value="${r.incline}" placeholder="0"><label>% inc</label></div>
+      </div>
+      <div class="rowbtns">
+        <button class="btn sm ghost" data-a="rep">Repeat last</button>
+        <button class="btn sm ${r.done?'primary':'ghost'}" data-a="done">${r.done?'Run logged ✓':'Mark run done'}</button>
+      </div>
+    </div>`;
+
+  card.querySelector('.machine').onclick=e=>{ e.stopPropagation(); openMachine(TREADMILL); };
+  card.querySelector('.exmeta').onclick=()=>card.classList.toggle('open');
+  const dEl=card.querySelector('.rd'), mEl=card.querySelector('.rm'), iEl=card.querySelector('.ri');
+  dEl.oninput=()=>{ r.dist=dEl.value; persist(); };
+  mEl.oninput=()=>{ r.min=mEl.value; persist(); };
+  iEl.oninput=()=>{ r.incline=iEl.value; persist(); };
+  dEl.onblur=mEl.onblur=iEl.onblur=()=>renderDay();
+  card.querySelector('[data-a=rep]').onclick=()=>{
+    if(!prev) return;
+    r.dist=prev.dist; r.min=prev.min; r.incline=prev.incline||'';
+    persist(); renderDay();
+  };
+  card.querySelector('[data-a=done]').onclick=()=>{
+    r.done=!r.done; persist(); renderDay(); renderStrip();
+  };
+  main.appendChild(card);
+}
+function refreshStack(card,ex){
+  const rows=DB.logs[selected].sets[ex.id];
+  const cur=+(rows.find(s=>s.w)?.w)||0;
+  const max=Math.max(topWeight(ex.id),cur,1);
+  const pct=cur?Math.max(.1,Math.min(1,cur/max)):.1;
+  card.querySelector('.stack').innerHTML=stackSVG(pct)+`<div class="stackval">${cur?cur+' '+DB.settings.unit:'—'}</div>`;
+}
+
+/* ---------- machine detail ---------- */
+function openMachine(ex){
+  const sheet=document.getElementById('sheet'), body=document.getElementById('sheetbody');
+  const photo=DB.photos[ex.m];
+  body.innerHTML=`
+    <h3>${ex.n}</h3>
+    <div class="modelline">${ex.p} · ${ex.model}</div>
+    <div class="hero">${photo?`<img src="${photo}" alt="Your gym's ${ex.n}">`:ART[ex.m].side}</div>
+    ${photo?`<div class="shotcap">your gym’s machine</div>`:''}
+    <div class="shots">
+      <div class="shot">${ART[ex.m].side}<div class="shotcap">side profile — how to spot it</div></div>
+      <div class="shot">${ART[ex.m].setup}<div class="shotcap">setup position</div></div>
+    </div>
+    <ol class="steps">${ex.steps.map(s=>`<li>${s}</li>`).join('')}</ol>
+    <div class="fieldrow">
+      <div class="lbl">Your gym’s machine</div>
+      <input type="file" id="ph" accept="image/*" capture="environment">
+      <div class="note">Snap the machine once and it replaces the drawing everywhere — your gym’s exact Precor unit,
+        pin height, and shroud colour.</div>
+    </div>
+    <a class="btn ghost wide linkbtn" href="${ex.url}" target="_blank" rel="noopener">See it on precor.com</a>
+    <div class="msg" id="msg"></div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn ghost wide" id="close">Close</button>
+      ${photo?`<button class="btn ghost wide" id="rm">Remove photo</button>`:''}
+    </div>
+    <div class="note">The drawings are mine — I can’t bundle Precor’s own product photography into the file,
+      so the link above opens the real photos on Precor’s site, and your own snapshot beats both.</div>`;
+  body.querySelector('#ph').onchange=async e=>{
+    const f=e.target.files[0]; if(!f) return;
+    try{
+      DB.photos[ex.m]=await downscale(f);
+      await Store.save(DB);
+      openMachine(ex); render();
+    }catch(err){ flash(body.querySelector('#msg'),'Couldn’t read that image. Try another.','err'); }
+  };
+  body.querySelector('#close').onclick=()=>sheet.classList.remove('on');
+  const rm=body.querySelector('#rm');
+  if(rm) rm.onclick=()=>{ delete DB.photos[ex.m]; persist(); openMachine(ex); render(); };
+  sheet.classList.add('on');
+  sheet.onclick=e=>{ if(e.target===sheet) sheet.classList.remove('on'); };
+}
+function downscale(file){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=()=>{
+      const img=new Image();
+      img.onload=()=>{
+        const W=640, s=Math.min(1,W/img.width);
+        const c=document.createElement('canvas');
+        c.width=Math.round(img.width*s); c.height=Math.round(img.height*s);
+        c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+        res(c.toDataURL('image/jpeg',.72));
+      };
+      img.onerror=rej; img.src=r.result;
+    };
+    r.onerror=rej; r.readAsDataURL(file);
+  });
+}
+
+/* ---------- classes ---------- */
+function renderClasses(main){
+  const evs=eventsFor(selected);
+  const l=ensureLog(selected);
+  if(!evs.length){
+    const e=document.createElement('div');
+    e.className='empty';
+    e.innerHTML=`<b>No class booked</b>Import your iCloud calendar and the booking shows up here with its time and
+      type — or switch this day to Individual and lift instead.`;
+    main.appendChild(e);
+    renderOura(main);
+    return;
+  }
+  evs.forEach(ev=>{
+    const done=l.classes[ev.uid];
+    const card=document.createElement('div');
+    card.className='card classcard'+(done&&done.done?' done':'');
+    card.innerHTML=`
+      <div class="cardtop">
+        <div class="clock"><div class="t">${ev.time||'—'}</div><div class="m">${ev.loc?ev.loc.slice(0,10):'class'}</div></div>
+        <div class="exmeta">
+          <div class="exname">${ev.title}</div>
+          <div class="precor">from your calendar</div>
+          ${done&&done.done?`<div class="last">Done · ${done.min||'—'} min · RPE ${done.rpe||'—'}</div>`:''}
+        </div>
+      </div>
+      <div class="sets">
+        <div class="setrow" style="grid-template-columns:1fr 1fr">
+          <div class="field"><input type="number" inputmode="numeric" class="cm" value="${done?done.min||'':''}" placeholder="0"><label>min</label></div>
+          <div class="field"><input type="number" inputmode="numeric" class="cr" value="${done?done.rpe||'':''}" placeholder="1-10"><label>RPE</label></div>
+        </div>
+        <div class="fieldrow"><textarea class="cn" rows="2" placeholder="How did it feel?">${done?done.notes||'':''}</textarea></div>
+        <button class="btn studio wide">${done&&done.done?'Logged ✓':'Mark done'}</button>
+      </div>`;
+    card.querySelector('.exmeta').onclick=()=>card.classList.toggle('open');
+    card.querySelector('.clock').onclick=()=>card.classList.toggle('open');
+    card.querySelector('button').onclick=async()=>{
+      // no clock run? fall back to the booked time and the minutes typed in
+      if(!l.startedAt){
+        const base=new Date(selected+'T'+(ev.time||'18:00')+':00');
+        l.startedAt=base.toISOString();
+        l.finishedAt=new Date(base.getTime()+(+(card.querySelector('.cm').value)||60)*60000).toISOString();
+      }
+      l.classes[ev.uid]={done:true,
+        min:card.querySelector('.cm').value,
+        rpe:card.querySelector('.cr').value,
+        notes:card.querySelector('.cn').value};
+      l.done=true; persist(); render();
+      if(ouraOn()){ try{ await ouraPull(selected); render(); }catch(e){} }
+    };
+    main.appendChild(card);
+  });
+  renderOura(main);
+}
+
+/* ---------- rest timer + bottom bar ---------- */
+let restLeft=0, restTimer=null;
+function startRest(sec){
+  restLeft=sec; clearInterval(restTimer);
+  restTimer=setInterval(()=>{ restLeft--; if(restLeft<=0){clearInterval(restTimer);restLeft=0;} renderBar(); },1000);
+  renderBar();
+}
+function renderBar(){
+  const bar=document.getElementById('bar');
+  bar.innerHTML='';
+  if(view==='history'){
+    const b=document.createElement('button');
+    b.className='btn wide'; b.textContent='Back to this week';
+    b.onclick=()=>{ view='week'; weekStart=mondayOf(today); selected=iso(today); render(); window.scrollTo({top:0}); };
+    bar.appendChild(b);
+    return;
+  }
+
+  const st=sessionState(selected), l=DB.logs[selected];
+
+  if(st==='running'){
+    const chip=document.createElement('div');
+    chip.className='rest running';
+    chip.innerHTML=`<span class="dotlive"></span>${hms(elapsedSec(l))}`;
+    bar.appendChild(chip);
+  } else if(restLeft>0){
+    const r=document.createElement('div'); r.className='rest';
+    r.textContent=`${Math.floor(restLeft/60)}:${String(restLeft%60).padStart(2,'0')}`;
+    bar.appendChild(r);
+  }
+
+  if(st!=='running'){
+    const cal=document.createElement('button');
+    cal.className='btn'; cal.style.flex='1'; cal.textContent='Calendar';
+    cal.onclick=openCalendarSheet;
+    bar.appendChild(cal);
+  }
+
+  const main=document.createElement('button');
+  main.className='btn wide ' + (st==='running' ? 'stop' : 'primary');
+  main.textContent = st==='idle' ? 'Start session'
+                   : st==='running' ? 'Stop session'
+                   : `Logged · ${durationMin(l)} min`;
+  main.onclick = st==='idle' ? ()=>startSession(selected)
+               : st==='running' ? ()=>stopSession(selected)
+               : ()=>resumeSession(selected);
+  bar.appendChild(main);
+}
+
+/* ---------- calendar ---------- */
+function openCalendarSheet(){
+  const sheet=document.getElementById('sheet'), body=document.getElementById('sheetbody');
+  body.innerHTML=`
+    <h3>Class calendar</h3>
+    <div class="modelline">iCloud → this app</div>
+    <div class="seg">
+      <button class="btn sm on" data-tab="file">Import .ics</button>
+      <button class="btn sm" data-tab="url">Subscribe URL</button>
+      <button class="btn sm" data-tab="manual">Add by hand</button>
+    </div>
+    <div id="tab"></div>
+    <div class="msg" id="msg"></div>
+    <div class="note" id="note"></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn ghost wide" id="close">Close</button>
+      <button class="btn ghost wide" id="clear">Clear events</button>
+    </div>`;
+  const tab=body.querySelector('#tab'), msg=body.querySelector('#msg'), note=body.querySelector('#note');
+  function show(w){
+    body.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===w));
+    msg.className='msg';
+    if(w==='file'){
+      tab.innerHTML=`<div class="fieldrow"><div class="lbl">Calendar file</div>
+        <input type="file" id="ics" accept=".ics,text/calendar"></div>
+        <div class="fieldrow"><div class="lbl">Or paste the file’s contents</div>
+        <textarea id="icstext" rows="4" placeholder="BEGIN:VCALENDAR…"></textarea></div>
+        <button class="btn primary wide" id="imp">Import bookings</button>`;
+      note.innerHTML=`<b>On iPhone:</b> Calendar → your gym calendar → Share Calendar → Public Calendar → copy the link,
+        open it in Safari, and it downloads an <code>.ics</code>. Pick that file here. Nothing leaves your phone.`;
+      tab.querySelector('#imp').onclick=async()=>{
+        const f=tab.querySelector('#ics').files[0];
+        const txt=f?await f.text():tab.querySelector('#icstext').value;
+        if(!txt.trim()) return flash(msg,'Pick a file or paste the calendar text first.','err');
+        const n=importICS(txt);
+        flash(msg,n?`Imported ${n} booking${n>1?'s':''}.`:'No events found in that file.',n?'ok':'err');
+        if(n){ persist(); render(); }
+      };
+    }
+    if(w==='url'){
+      const saved=DB.settings.icsUrl||'', px=DB.settings.proxy||'';
+      const sync=DB.settings.lastSync ? new Date(DB.settings.lastSync).toLocaleString() : '';
+      tab.innerHTML=`<div class="fieldrow"><div class="lbl">Public iCloud calendar link</div>
+        <input type="text" id="url" value="${saved}" placeholder="webcal://p01-calendars.icloud.com/published/…"></div>
+        <div class="fieldrow"><div class="lbl">Relay URL — only if it isn’t hosted with the app</div>
+          <input type="text" id="px" value="${px}" placeholder="auto-detected"></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn ghost wide" id="test">Test relay</button>
+          <button class="btn primary wide" id="fetch">${saved?'Sync now':'Subscribe'}</button>
+        </div>`;
+      note.innerHTML=`Apple won’t let a browser read the feed directly, so a server has to relay it. If the relay is
+        deployed with the app, it’s found automatically — leave Relay URL blank. Once subscribed, the calendar
+        re-syncs every time you open the app.${sync?`<br><br><b>Last synced:</b> ${sync}`:''}`;
+      const save=()=>{ DB.settings.proxy=tab.querySelector('#px').value.trim(); persist(); };
+      tab.querySelector('#px').oninput=save;
+      tab.querySelector('#test').onclick=async()=>{
+        save();
+        flash(msg,'Testing…','');
+        for(const base of relayBases()){
+          try{
+            const r=await fetch(base);
+            const t=await r.text();
+            if(r.status===404) continue;
+            return flash(msg,`Relay found at ${base} — ${t.slice(0,70)}`, r.ok?'ok':'err');
+          }catch(e){ /* try the next candidate */ }
+        }
+        flash(msg,`No relay answered at ${relayBases().join(' or ')}. Deploy it with the app, or paste its URL above.`,'err');
+      };
+      tab.querySelector('#fetch').onclick=async()=>{
+        save();
+        let u=tab.querySelector('#url').value.trim();
+        if(!u) return flash(msg,'Paste your published calendar link.','err');
+        u=u.replace(/^webcal:/,'https:');
+        flash(msg,'Syncing…','');
+        try{
+          const {text,via}=await fetchICS(u);
+          const n=importICS(text);
+          DB.settings.icsUrl=u; DB.settings.lastSync=new Date().toISOString();
+          persist(); render();
+          flash(msg, n?`Synced ${n} booking${n>1?'s':''} via ${via}. It’ll re-sync each time you open the app.`
+                     :'Synced — no new bookings in the next 10 weeks.','ok');
+        }catch(e){ flash(msg,e.message,'err'); }
+      };
+    }
+    if(w==='manual'){
+      tab.innerHTML=`<div class="fieldrow"><div class="lbl">Class</div><input type="text" id="mt" placeholder="e.g. Spin, HIIT, Yoga"></div>
+        <div class="fieldrow"><div class="lbl">Date</div><input type="text" id="md" value="${selected}"></div>
+        <div class="fieldrow"><div class="lbl">Time</div><input type="time" id="mtime" value="18:00"></div>
+        <button class="btn primary wide" id="addm">Add class</button>`;
+      note.innerHTML=`For a drop-in you booked at the desk.`;
+      tab.querySelector('#addm').onclick=()=>{
+        const t=tab.querySelector('#mt').value.trim();
+        if(!t) return flash(msg,'Give the class a name.','err');
+        const date=tab.querySelector('#md').value;
+        DB.events.push({uid:'m'+Date.now(),title:t,date,time:tab.querySelector('#mtime').value,loc:''});
+        setMode(date,'class');
+        flash(msg,'Class added.','ok');
+      };
+    }
+  }
+  body.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>show(b.dataset.tab));
+  body.querySelector('#close').onclick=()=>sheet.classList.remove('on');
+  body.querySelector('#clear').onclick=()=>{ DB.events=[]; persist(); render(); flash(msg,'Events cleared.','ok'); };
+  show('file');
+  sheet.classList.add('on');
+  sheet.onclick=e=>{ if(e.target===sheet) sheet.classList.remove('on'); };
+}
+/* Apple's servers don't send CORS headers, so a browser can't read a webcal feed
+   directly. A relay fetches it server-side. If the app is deployed alongside one
+   (Cloudflare Pages -> /ics, Netlify -> /.netlify/functions/ics) it's found
+   automatically. A relay on another host can be pasted into settings instead. */
+const RELAY_PATHS=['/ics','/.netlify/functions/ics'];
+const relayBases=()=>{
+  const custom=(DB.settings.proxy||'').trim();
+  return custom ? [custom] : RELAY_PATHS;
+};
+const relayFor=(base,u)=> base + (base.includes('?')?'&':'?') + 'url=' + encodeURIComponent(u);
+
+async function fetchICS(u){
+  try{
+    const r=await fetch(u);
+    if(r.ok){ const t=await r.text(); if(/BEGIN:VCALENDAR/i.test(t)) return {text:t,via:'direct'}; }
+  }catch(e){ /* expected — this is the CORS block */ }
+
+  const bases=relayBases(), isCustom=!!(DB.settings.proxy||'').trim();
+  let lastErr=null;
+  for(const base of bases){
+    let r;
+    try{ r=await fetch(relayFor(base,u)); }
+    catch(e){ lastErr='Couldn’t reach '+base+'.'; continue; }
+    if(r.status===404){ lastErr='Nothing is serving '+base+' (404).'; continue; }
+    const t=await r.text();
+    if(!r.ok){ lastErr=`Relay said ${r.status}: ${t.slice(0,140)}`; continue; }
+    if(!/BEGIN:VCALENDAR/i.test(t)){ lastErr='The relay answered, but that link didn’t return a calendar.'; continue; }
+    if(!isCustom) DB.settings.relayPath=base;  // remember which one works
+    return {text:t, via: isCustom?'relay':'built-in relay'};
+  }
+  throw new Error((lastErr||'No relay reachable.') +
+    (isCustom ? ' Check the Relay URL.' : ' Deploy the relay with the app, or use Import .ics.'));
+}
+/* on launch, quietly re-pull the subscribed calendar so new bookings appear */
+async function refreshCalendar(){
+  const u=DB.settings.icsUrl;
+  if(!u) return;
+  try{
+    const {text}=await fetchICS(u);
+    const n=importICS(text);
+    DB.settings.lastSync=new Date().toISOString();
+    persist();
+    if(n) render();
+  }catch(e){ /* offline or no relay — saved bookings still show */ }
+}
+
+/* ===================== OURA =====================
+   The relay holds the client secret and does the talking; the phone holds only
+   the access token. Requires the app + functions deployed together. */
+const ouraOn=()=> !!(DB.settings.oura && DB.settings.oura.a);
+async function ouraPost(route, body){
+  const r=await fetch(`/oura/${route}`,{
+    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
+  });
+  if(r.status===404) throw new Error('The Oura relay isn’t deployed with this app.');
+  if(r.status===501) throw new Error(await r.text());
+  const j=await r.json().catch(()=>({error:'Bad response from the relay.'}));
+  if(!r.ok) throw new Error(j.error==='reauth' ? 'reauth' : (j.error||`Relay error ${r.status}`));
+  return j;
+}
+async function ouraToken(){
+  const o=DB.settings.oura;
+  if(!o || !o.a) throw new Error('reauth');
+  if(o.e && Date.now() > o.e - 60000){          // expiring within a minute — renew
+    if(!o.r) throw new Error('reauth');
+    const t=await ouraPost('refresh',{refresh:o.r});
+    DB.settings.oura=t; persist();
+    return t.a;
+  }
+  return o.a;
+}
+/* pull heart rate for the session window, plus the day's workouts and activity */
+async function ouraPull(ds){
+  const l=DB.logs[ds]; if(!l) return;
+  const token=await ouraToken();
+  const data=await ouraPost('session',{
+    token, date:ds,
+    start:l.startedAt||null,
+    end:l.finishedAt||null,
+  });
+  l.oura=Object.assign({pulledAt:new Date().toISOString()}, data);
+  persist();
+  return l.oura;
+}
+function ouraConnect(){ window.location.href='/oura/start'; }
+function ouraDisconnect(){ delete DB.settings.oura; persist(); render(); }
+/* the callback hands tokens back in the URL fragment — read, store, wipe */
+function ouraCatchCallback(){
+  const m=/[#&]oura=([^&]+)/.exec(location.hash||'');
+  if(!m) return;
+  try{
+    DB.settings.oura=JSON.parse(decodeURIComponent(m[1]));
+    Store.save(DB);
+  }catch(e){}
+  history.replaceState(null,'',location.pathname+location.search);
+}
+const metresToMiles=m=> (m/1609.34).toFixed(2);
+
+function flash(el,text,kind){ el.textContent=text; el.className='msg on '+(kind||''); }
+
+function importICS(text){
+  const lines=text.replace(/\r\n/g,'\n').replace(/\n[ \t]/g,'').split('\n');
+  const evs=[]; let cur=null;
+  lines.forEach(line=>{
+    if(line.startsWith('BEGIN:VEVENT')) cur={};
+    else if(line.startsWith('END:VEVENT')){ if(cur) evs.push(cur); cur=null; }
+    else if(cur){
+      const i=line.indexOf(':'); if(i<0) return;
+      const name=line.slice(0,i).split(';')[0], val=line.slice(i+1);
+      if(name==='SUMMARY') cur.title=val.replace(/\\,/g,',').replace(/\\n/g,' ').trim();
+      if(name==='LOCATION') cur.loc=val.replace(/\\,/g,',').split(/[\n,]/)[0].trim();
+      if(name==='DTSTART') cur.start=val.trim();
+      if(name==='RRULE') cur.rrule=val.trim();
+      if(name==='UID') cur.uid=val.trim();
+    }
+  });
+  const have=new Set(DB.events.map(e=>e.uid));
+  const from=new Date(today); from.setDate(from.getDate()-14);
+  const to=new Date(today); to.setDate(to.getDate()+70);
+  let added=0;
+  evs.forEach(ev=>{
+    if(!ev.start||!ev.title) return;
+    const base=parseDT(ev.start); if(!base) return;
+    const time=ev.start.length>8?`${ev.start.slice(9,11)}:${ev.start.slice(11,13)}`:'';
+    const occ=[];
+    if(ev.rrule&&/FREQ=WEEKLY/i.test(ev.rrule)){
+      const m=/UNTIL=(\d{8})/i.exec(ev.rrule);
+      const until=m?parseDT(m[1]):to;
+      const iv=+((/INTERVAL=(\d+)/i.exec(ev.rrule)||[,1])[1])||1;
+      const d=new Date(base);
+      while(d<=to && d<=until && occ.length<60){
+        if(d>=from) occ.push(new Date(d));
+        d.setDate(d.getDate()+7*iv);
+      }
+    } else if(base>=from && base<=to) occ.push(base);
+    occ.forEach(d=>{
+      const uid=(ev.uid||ev.title)+iso(d);
+      if(have.has(uid)) return;
+      have.add(uid);
+      DB.events.push({uid,title:ev.title,date:iso(d),time,loc:ev.loc||''});
+      const l=DB.logs[iso(d)];
+      if(!l||!l.mode) { DB.logs[iso(d)]=Object.assign(l||{},{mode:'class',classes:{}}); }
+      added++;
+    });
+  });
+  return added;
+}
+function parseDT(v){
+  const m=/^(\d{4})(\d{2})(\d{2})/.exec(v); if(!m) return null;
+  const d=new Date(+m[1],+m[2]-1,+m[3]); d.setHours(0,0,0,0); return d;
+}
+
+/* ===================== BOOT ===================== */
+(async function(){
+  const saved=await Store.load();
+  if(saved) DB=Object.assign(DB,saved);
+  DB.photos=DB.photos||{}; DB.settings=DB.settings||{unit:'lb'};
+  DB.settings.dist=DB.settings.dist||'mi';
+  ouraCatchCallback();
+  document.getElementById('prev').onclick=()=>{ weekStart.setDate(weekStart.getDate()-7); selected=iso(weekStart); render(); };
+  document.getElementById('next').onclick=()=>{ weekStart.setDate(weekStart.getDate()+7); selected=iso(weekStart); render(); };
+  document.querySelectorAll('#tabs button').forEach(b=> b.onclick=()=>{ view=b.dataset.view; render(); window.scrollTo({top:0}); });
+  render();
+  if(sessionState(selected)==='running') tickClock();
+  refreshCalendar();
+})();
+</script>
