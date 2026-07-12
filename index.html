@@ -76,6 +76,16 @@
   .pick .pnext{display:none}
   .pick.on{border-color:var(--pin);background:rgba(242,176,30,.10)}
   .pick.on .pl{color:var(--pin)}
+  .live{display:inline-flex;align-items:center;gap:5px;color:var(--pin);font-family:'IBM Plex Mono',monospace;font-size:12px}
+  .live i{width:6px;height:6px;border-radius:50%;background:var(--pin);animation:pulse 1.6s ease-in-out infinite}
+  .live b{font-weight:600}
+  .dur{color:var(--done);font-family:'IBM Plex Mono',monospace;font-size:12px}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+  @media (prefers-reduced-motion:reduce){ .live i{animation:none} }
+  .rest.running{color:var(--pin);gap:6px;min-width:86px;font-weight:600}
+  .dotlive{width:6px;height:6px;border-radius:50%;background:var(--pin);display:inline-block;
+    margin-right:5px;animation:pulse 1.6s ease-in-out infinite}
+  button.btn.stop{background:#E5533D;border-color:#E5533D;color:#2A0A05}
   .machine.oura svg{padding:2px}
   .oreadout{display:grid;grid-template-columns:repeat(auto-fit,minmax(64px,1fr));gap:8px}
   .ostat{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:8px 6px;text-align:center}
@@ -595,6 +605,64 @@ function topWeight(id){
   return m;
 }
 
+/* ===================== SESSION CLOCK =====================
+   An explicit start/stop, so the logged duration is the real one — and so the
+   Oura heart-rate window matches what you actually did. */
+function sessionState(ds){
+  const l=DB.logs[ds];
+  if(!l||!l.startedAt) return 'idle';
+  if(!l.finishedAt) return 'running';
+  return 'done';
+}
+function durationMin(l){
+  if(!l||!l.startedAt||!l.finishedAt) return 0;
+  return Math.max(1, Math.round((new Date(l.finishedAt)-new Date(l.startedAt))/60000));
+}
+function elapsedSec(l){
+  if(!l||!l.startedAt) return 0;
+  const end=l.finishedAt?new Date(l.finishedAt):new Date();
+  return Math.max(0, Math.floor((end-new Date(l.startedAt))/1000));
+}
+const hms=sec=>{
+  const h=Math.floor(sec/3600), m=Math.floor(sec%3600/60), x=sec%60;
+  return h ? `${h}:${String(m).padStart(2,'0')}:${String(x).padStart(2,'0')}`
+           : `${m}:${String(x).padStart(2,'0')}`;
+};
+function startSession(ds){
+  const l=ensureLog(ds);
+  l.startedAt=new Date().toISOString();
+  delete l.finishedAt; l.done=false;
+  persist(); render(); tickClock();
+}
+async function stopSession(ds){
+  const l=ensureLog(ds);
+  if(!l.startedAt) return;
+  l.finishedAt=new Date().toISOString();
+  l.done=true;
+  const mins=durationMin(l);
+  // a class with no duration typed gets the one we just measured
+  if(l.mode==='class' && l.classes){
+    Object.values(l.classes).forEach(c=>{ if(c.done && !c.min) c.min=String(mins); });
+  }
+  persist(); render();
+  if(ouraOn()){ try{ await ouraPull(ds); render(); }catch(e){ /* the Oura card explains */ } }
+}
+function resumeSession(ds){
+  const l=ensureLog(ds);
+  delete l.finishedAt; l.done=false;
+  persist(); render(); tickClock();
+}
+let clockTimer=null;
+function tickClock(){
+  clearInterval(clockTimer);
+  clockTimer=setInterval(()=>{
+    if(sessionState(selected)!=='running' && restLeft<=0){ clearInterval(clockTimer); return; }
+    renderBar();
+    const el=document.getElementById('elapsedbig');
+    if(el) el.textContent=hms(elapsedSec(DB.logs[selected]));
+  },1000);
+}
+
 /* ===================== RENDER ===================== */
 let view='week';
 function render(){
@@ -625,6 +693,14 @@ function allSessions(){
     if(l.mode==='class') return l.classes && Object.values(l.classes).some(c=>c.done);
     return false;
   }).sort().reverse();
+}
+function timeTotals(){
+  let mins=0, n=0;
+  Object.keys(DB.logs).forEach(ds=>{
+    const m=durationMin(DB.logs[ds]);
+    if(m){ mins+=m; n++; }
+  });
+  return {mins, n, avg: n?Math.round(mins/n):0};
 }
 function ouraTotals(){
   const hrs=[], kcal=[];
@@ -751,6 +827,9 @@ function renderHistory(){
       <div class="k">treadmill · ${run.runs} run${run.runs===1?'':'s'} · avg ${avgPace}</div></div>
     <div class="stat"><div class="v">${perWeek}<small>/wk</small></div>
       <div class="k">${last30} sessions in the last 30 days</div></div>
+    ${(()=>{ const t=timeTotals(); return t.n ? `
+    <div class="stat"><div class="v">${(t.mins/60).toFixed(1)}<small>hrs</small></div>
+      <div class="k">time training · avg ${t.avg} min a session</div></div>` : ''; })()}
     <div class="stat"><div class="v">${run.min}<small>min</small></div>
       <div class="k">time on the treadmill</div></div>
     ${(()=>{ const o=ouraTotals(); return o.n ? `
@@ -811,9 +890,10 @@ function renderHistory(){
       const s=sessionVolume(l);
       const rd = l.run && +l.run.dist>0 ? ` · ${l.run.dist} ${DB.settings.dist||'mi'} run` : '';
       const hr = l.oura && l.oura.hr ? ` · ${l.oura.hr.avg} bpm` : '';
+      const dm = durationMin(l) ? ` · ${durationMin(l)} min` : '';
       row.innerHTML=`<div class="tag lift">${l.plan||'A'}</div>
         <div class="sm"><b>Full Body ${l.plan||'A'}</b>
-          <span>${when} · ${s.sets} sets · ${Math.round(s.v).toLocaleString()} ${DB.settings.unit}${rd}${hr}</span></div>
+          <span>${when}${dm} · ${s.sets} sets · ${Math.round(s.v).toLocaleString()} ${DB.settings.unit}${rd}${hr}</span></div>
         <div class="go">open ›</div>`;
     } else {
       const c=classInfo(ds);
@@ -900,12 +980,18 @@ function renderDay(){
   const d=new Date(selected+'T12:00');
   main.innerHTML='';
 
+  const st=sessionState(selected), lg=DB.logs[selected];
   const head=document.createElement('div');
   head.className='dayhead';
+  const durline = st==='running'
+    ? `<span class="live"><i></i>Session running · <b id="elapsedbig">${hms(elapsedSec(lg))}</b></span>`
+    : st==='done'
+      ? `<span class="dur">Logged · ${durationMin(lg)} min</span>`
+      : '';
   head.innerHTML=`
     <div class="eyebrow ${mode==='lift'?'pin':'studio'}">${mode==='lift'?'Individual training':'Class'}</div>
     <h2>${DOWFULL[d.getDay()]}</h2>
-    <div class="sub">${d.toLocaleDateString(undefined,{month:'long',day:'numeric'})}</div>
+    <div class="sub">${d.toLocaleDateString(undefined,{month:'long',day:'numeric'})} ${durline}</div>
     <div class="modes">
       <button class="mode ${mode==='class'?'on':''}" data-mode="class">
         <span class="mt">Class</span><span class="ms">from iCloud calendar</span></button>
@@ -996,7 +1082,7 @@ function renderLift(main, planKey){
         e.currentTarget.classList.toggle('on',s.done);
         card.classList.toggle('done',rows.some(x=>x.done));
         if(s.done && !s.w && prev){ s.w=prev.sets[Math.min(i,prev.sets.length-1)].w; wIn.value=s.w; }
-        if(s.done && !l.startedAt) l.startedAt=new Date().toISOString();  // the clock starts here
+        if(s.done && !l.startedAt) startSession(selected);  // ticking a set starts the clock too
         startRest(i<2 && ex.sets>2 ? 150 : 90);
         persist(); refreshStack(card,ex); renderStrip();
       };
@@ -1259,11 +1345,11 @@ function renderClasses(main){
     card.querySelector('.exmeta').onclick=()=>card.classList.toggle('open');
     card.querySelector('.clock').onclick=()=>card.classList.toggle('open');
     card.querySelector('button').onclick=async()=>{
+      // no clock run? fall back to the booked time and the minutes typed in
       if(!l.startedAt){
-        const t=(ev.time||'').split(':');
-        const base=new Date(selected+'T'+((ev.time||'18:00'))+':00');
+        const base=new Date(selected+'T'+(ev.time||'18:00')+':00');
         l.startedAt=base.toISOString();
-        l.finishedAt=new Date(base.getTime()+ (+(card.querySelector('.cm').value)||60)*60000).toISOString();
+        l.finishedAt=new Date(base.getTime()+(+(card.querySelector('.cm').value)||60)*60000).toISOString();
       }
       l.classes[ev.uid]={done:true,
         min:card.querySelector('.cm').value,
@@ -1294,35 +1380,36 @@ function renderBar(){
     bar.appendChild(b);
     return;
   }
-  const mode=modeOf(selected);
-  if(mode==='lift'&&restLeft>0){
+
+  const st=sessionState(selected), l=DB.logs[selected];
+
+  if(st==='running'){
+    const chip=document.createElement('div');
+    chip.className='rest running';
+    chip.innerHTML=`<span class="dotlive"></span>${hms(elapsedSec(l))}`;
+    bar.appendChild(chip);
+  } else if(restLeft>0){
     const r=document.createElement('div'); r.className='rest';
     r.textContent=`${Math.floor(restLeft/60)}:${String(restLeft%60).padStart(2,'0')}`;
     bar.appendChild(r);
   }
-  const cal=document.createElement('button');
-  cal.className='btn wide'; cal.textContent='Calendar';
-  cal.onclick=openCalendarSheet; bar.appendChild(cal);
-  if(mode==='lift'){
-    const l=DB.logs[selected]||{};
-    const any=l.sets && Object.values(l.sets).some(a=>a.some(s=>s.done));
-    const fin=document.createElement('button');
-    fin.className='btn primary wide';
-    fin.textContent=l.done?'Session logged ✓':(any?'Finish session':'Start session');
-    fin.onclick=async()=>{
-      const L=ensureLog(selected);
-      L.done=!L.done;
-      if(L.done){
-        L.finishedAt=new Date().toISOString();
-        if(!L.startedAt) L.startedAt=new Date(Date.now()-45*60000).toISOString(); // no ticks: assume ~45 min
-      }
-      persist(); render();
-      if(L.done && ouraOn()){
-        try{ await ouraPull(selected); render(); }catch(e){ /* card shows the reason */ }
-      }
-    };
-    bar.appendChild(fin);
+
+  if(st!=='running'){
+    const cal=document.createElement('button');
+    cal.className='btn'; cal.style.flex='1'; cal.textContent='Calendar';
+    cal.onclick=openCalendarSheet;
+    bar.appendChild(cal);
   }
+
+  const main=document.createElement('button');
+  main.className='btn wide ' + (st==='running' ? 'stop' : 'primary');
+  main.textContent = st==='idle' ? 'Start session'
+                   : st==='running' ? 'Stop session'
+                   : `Logged · ${durationMin(l)} min`;
+  main.onclick = st==='idle' ? ()=>startSession(selected)
+               : st==='running' ? ()=>stopSession(selected)
+               : ()=>resumeSession(selected);
+  bar.appendChild(main);
 }
 
 /* ---------- calendar ---------- */
@@ -1595,6 +1682,7 @@ function parseDT(v){
   document.getElementById('next').onclick=()=>{ weekStart.setDate(weekStart.getDate()+7); selected=iso(weekStart); render(); };
   document.querySelectorAll('#tabs button').forEach(b=> b.onclick=()=>{ view=b.dataset.view; render(); window.scrollTo({top:0}); });
   render();
+  if(sessionState(selected)==='running') tickClock();
   refreshCalendar();
 })();
 </script>
