@@ -86,6 +86,21 @@
   .dotlive{width:6px;height:6px;border-radius:50%;background:var(--pin);display:inline-block;
     margin-right:5px;animation:pulse 1.6s ease-in-out infinite}
   button.btn.stop{background:#E5533D;border-color:#E5533D;color:#2A0A05}
+  .gearwrap{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+  .chip{display:inline-flex;align-items:center;gap:5px;background:var(--panel-2);border:1px solid var(--line);
+    color:var(--steel);border-radius:999px;padding:7px 11px 7px 9px;cursor:pointer;font-size:12.5px;
+    font-family:Inter,sans-serif}
+  .chip i{display:flex;width:15px;height:15px}
+  .chip i svg{width:15px;height:15px}
+  .chip.on{border-color:var(--studio);background:rgba(84,191,240,.12);color:var(--studio)}
+  .gearline{font-size:11px;color:var(--studio);margin-top:3px;font-family:'IBM Plex Mono',monospace}
+  .gearbar{display:flex;align-items:center;gap:9px;margin-bottom:7px}
+  .gearbar .gn{flex:0 0 96px;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--chalk)}
+  .gearbar .gn i{width:14px;height:14px;color:var(--studio);display:flex}
+  .gearbar .gn i svg{width:14px;height:14px}
+  .gearbar .track{flex:1;height:8px;background:var(--panel-2);border-radius:4px;overflow:hidden}
+  .gearbar .fill{height:100%;background:var(--studio);border-radius:4px}
+  .gearbar .gc{flex:0 0 26px;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--steel)}
   .machine.oura svg{padding:2px}
   .oreadout{display:grid;grid-template-columns:repeat(auto-fit,minmax(64px,1fr));gap:8px}
   .ostat{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:8px 6px;text-align:center}
@@ -649,6 +664,21 @@ const PLAN={
           'Lower slowly — this one rewards patience, not weight.']}
  ]}
 };
+/* What actually happens in a class — ticked off after the fact, since the
+   coach decides the menu, not you. */
+const gi=(inner)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+  stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+const GEAR=[
+  {id:'treadmill',  n:'Treadmill',     icon:gi('<path d="M3 19h18"/><path d="M5 17h11"/><path d="M16 15V6h3"/><circle cx="10" cy="5" r="1.6"/><path d="M10 8l-2 4 3 2"/>')},
+  {id:'ropes',      n:'Battle ropes',  icon:gi('<path d="M4 6c3 0 3 5 6 5s3-5 6-5 3 5 5 5"/><path d="M4 13c3 0 3 5 6 5s3-5 6-5 3 5 5 5"/>')},
+  {id:'vipers',     n:'Vipers',        icon:gi('<rect x="3" y="9" width="18" height="6" rx="3"/><path d="M8 9V7M16 15v2"/>')},
+  {id:'medball',    n:'Medicine balls',icon:gi('<circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4v16"/>')},
+  {id:'jump',       n:'High jump',     icon:gi('<path d="M3 20h18"/><rect x="13" y="10" width="8" height="10"/><path d="M8 18V9l-3 4"/><circle cx="8" cy="5" r="1.8"/>')},
+  {id:'kettlebell', n:'Kettlebells',   icon:gi('<path d="M9 8a3 3 0 0 1 6 0"/><path d="M8 8c-2 2-3 4-3 7a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3c0-3-1-5-3-7z"/>')},
+  {id:'dumbbell',   n:'Dumbbells',     icon:gi('<path d="M4 8v8M7 6v12M17 6v12M20 8v8M7 12h10"/>')},
+];
+const GEAR_BY={}; GEAR.forEach(g=>GEAR_BY[g.id]=g);
+
 const DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const DOWFULL=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
@@ -806,16 +836,22 @@ function timeTotals(){
   return {mins, n, avg: n?Math.round(mins/n):0};
 }
 function ouraTotals(){
-  const hrs=[], kcal=[];
+  const hrs=[], peaks=[], kcal=[], rdy=[];
   Object.values(DB.logs).forEach(l=>{
-    if(l.oura && l.oura.hr && l.oura.hr.avg) hrs.push(l.oura.hr.avg);
-    const w=l.oura && (l.oura.workouts||[])[0];
+    const o=l.oura; if(!o) return;
+    if(o.hr && o.hr.avg) hrs.push(o.hr.avg);
+    if(o.hr && o.hr.max) peaks.push(o.hr.max);
+    const w=(o.workouts||[])[0];
     if(w && w.calories) kcal.push(w.calories);
+    if(o.readiness && o.readiness.score) rdy.push(o.readiness.score);
   });
+  const mean=a=> a.length ? Math.round(a.reduce((x,y)=>x+y,0)/a.length) : 0;
   return {
     n:hrs.length,
-    avgHR: hrs.length ? Math.round(hrs.reduce((a,b)=>a+b,0)/hrs.length) : 0,
+    avgHR: mean(hrs),
+    peakHR: peaks.length ? Math.max(...peaks) : 0,
     kcal: kcal.reduce((a,b)=>a+b,0),
+    readiness: mean(rdy),
   };
 }
 function runTotals(){
@@ -1071,7 +1107,9 @@ function renderHistory(){
     <div class="stat"><div class="v">${o.avgHR}<small>bpm</small></div>
       <div class="k">avg session heart rate · Oura · ${o.n} session${o.n===1?'':'s'}</div></div>
     <div class="stat"><div class="v">${o.kcal.toLocaleString()}<small>kcal</small></div>
-      <div class="k">burned in logged sessions</div></div>` : ''; })()}`;
+      <div class="k">burned in logged sessions${o.peakHR?` · peak ${o.peakHR} bpm`:''}</div></div>
+    ${o.readiness?`<div class="stat"><div class="v">${o.readiness}</div>
+      <div class="k">avg Oura readiness on training days</div></div>`:''}` : ''; })()}`;
   main.appendChild(stats);
 
   /* weekly volume */
@@ -1112,6 +1150,86 @@ function renderHistory(){
     main.appendChild(e);
   }
 
+  /* class equipment */
+  const gearCount={}, gearLast={};
+  let classesLogged=0;
+  Object.keys(DB.logs).sort().forEach(ds=>{
+    const l=DB.logs[ds];
+    Object.values(l.classes||{}).forEach(c=>{
+      if(!c.done) return;
+      classesLogged++;
+      (c.gear||[]).forEach(g=>{ gearCount[g]=(gearCount[g]||0)+1; gearLast[g]=ds; });
+    });
+  });
+  const gearUsed=Object.keys(gearCount).length;
+  if(classesLogged){
+    const hg=document.createElement('div'); hg.className='hsec'; hg.textContent='Class equipment';
+    main.appendChild(hg);
+    const gb=document.createElement('div');
+    gb.className='panelbox';
+    if(!gearUsed){
+      gb.innerHTML=`<div class="note" style="margin:0">Nothing ticked yet. Open a class and check off what it
+        used — over a few weeks it shows you what your classes actually cover, and what they never touch.</div>`;
+    } else {
+      const max=Math.max(...Object.values(gearCount));
+      gb.innerHTML=GEAR.map(g=>{
+        const c=gearCount[g.id]||0;
+        const pct=max?Math.round(c/max*100):0;
+        return `<div class="gearbar">
+          <span class="gn"><i>${g.icon}</i>${g.n}</span>
+          <span class="track"><span class="fill" style="width:${c?Math.max(4,pct):0}%;${c?'':'opacity:.25'}"></span></span>
+          <span class="gc">${c||'—'}</span>
+        </div>`;
+      }).join('') +
+      `<div class="note">Across ${classesLogged} logged class${classesLogged===1?'':'es'}.
+        ${(()=>{ const never=GEAR.filter(g=>!gearCount[g.id]).map(g=>g.n);
+          return never.length ? `Never come up: <b>${never.join(', ')}</b>.` : 'Your classes have covered all seven.'; })()}</div>`;
+    }
+    main.appendChild(gb);
+  }
+
+  /* Oura */
+  const ho=document.createElement('div'); ho.className='hsec'; ho.textContent='Oura';
+  main.appendChild(ho);
+  const obox=document.createElement('div');
+  obox.className='panelbox';
+  const missing=sessions.filter(ds=>!DB.logs[ds].oura).length;
+  const withO=sessions.filter(ds=>DB.logs[ds].oura);
+  obox.innerHTML=`
+    ${ouraOn()
+      ? `<div class="note" style="margin:0 0 10px">${withO.length} of ${sessions.length} sessions have Oura data${missing?` · ${missing} missing`:''}.</div>
+         <div style="display:flex;gap:8px">
+           <button class="btn ghost wide" id="obf">${missing?`Pull the ${missing} missing`:'All caught up'}</button>
+           <button class="btn ghost wide" id="obfa">Refresh all</button>
+         </div>
+         <div class="msg" id="obm"></div>`
+      : `<div class="note" style="margin:0 0 10px">Connect Oura and each session picks up heart rate,
+           calories, readiness and sleep — including everything you've already logged.</div>
+         <button class="btn primary wide" id="ocon2">Connect Oura</button>`}`;
+  main.appendChild(obox);
+
+  if(ouraOn()){
+    const obm=obox.querySelector('#obm');
+    const run=async(force)=>{
+      obox.querySelectorAll('button').forEach(b=>b.disabled=true);
+      try{
+        const r=await ouraBackfill(t=>flash(obm,t,''), force);
+        flash(obm, r.failed
+          ? `Pulled ${r.done} of ${r.total}. ${r.failed} had nothing in Oura for that window.`
+          : `Pulled ${r.done} session${r.done===1?'':'s'}.`, r.failed?'':'ok');
+        render();
+      }catch(e){
+        flash(obm, e.message==='reauth' ? 'Oura needs you to sign in again.' : e.message, 'err');
+        render();
+      }
+    };
+    const bf=obox.querySelector('#obf');
+    if(bf && missing) bf.onclick=()=>run(false);
+    obox.querySelector('#obfa').onclick=()=>run(true);
+  } else {
+    obox.querySelector('#ocon2').onclick=ouraConnect;
+  }
+
   /* session log */
   const h3=document.createElement('div'); h3.className='hsec'; h3.textContent='Sessions';
   main.appendChild(h3);
@@ -1125,18 +1243,25 @@ function renderHistory(){
     if(l.mode==='lift'){
       const s=sessionVolume(l);
       const rd = l.run && +l.run.dist>0 ? ` · ${l.run.dist} ${DB.settings.dist||'mi'} run` : '';
-      const hr = l.oura && l.oura.hr ? ` · ${l.oura.hr.avg} bpm` : '';
+      const o=l.oura||{};
+      const hr = o.hr ? ` · ${o.hr.avg}/${o.hr.max} bpm` : '';
+      const kc = (o.workouts||[])[0]?.calories ? ` · ${o.workouts[0].calories} kcal` : '';
       const dm = durationMin(l) ? ` · ${durationMin(l)} min` : '';
       row.innerHTML=`<div class="tag lift">${l.plan||'A'}</div>
         <div class="sm"><b>Full Body ${l.plan||'A'}</b>
-          <span>${when}${dm} · ${s.sets} sets · ${Math.round(s.v).toLocaleString()} ${DB.settings.unit}${rd}${hr}</span></div>
+          <span>${when}${dm} · ${s.sets} sets · ${Math.round(s.v).toLocaleString()} ${DB.settings.unit}${rd}${hr}${kc}</span></div>
         <button class="del" aria-label="Delete session">🗑</button>`;
     } else {
       const c=classInfo(ds);
-      const chr = l.oura && l.oura.hr ? ` · ${l.oura.hr.avg} bpm` : '';
+      const oc=l.oura||{};
+      const chr = (oc.hr ? ` · ${oc.hr.avg}/${oc.hr.max} bpm` : '') +
+                 ((oc.workouts||[])[0]?.calories ? ` · ${oc.workouts[0].calories} kcal` : '');
+      const gearNames=[...new Set(Object.values(l.classes||{}).filter(x=>x.done).flatMap(x=>x.gear||[]))]
+        .map(g=>GEAR_BY[g]?GEAR_BY[g].n:g);
       row.innerHTML=`<div class="tag class">C</div>
         <div class="sm"><b>${c.names.join(', ')||'Class'}</b>
-          <span>${when}${durationMin(l)?` · ${durationMin(l)} min`:(c.mins?` · ${c.mins} min`:'')}${c.rpe?` · RPE ${c.rpe.toFixed(0)}`:''}${chr}</span></div>
+          <span>${when}${durationMin(l)?` · ${durationMin(l)} min`:(c.mins?` · ${c.mins} min`:'')}${c.rpe?` · RPE ${c.rpe.toFixed(0)}`:''}${chr}</span>
+          ${gearNames.length?`<span class="gearline">${gearNames.join(' · ')}</span>`:''}</div>
         <button class="del" aria-label="Delete session">🗑</button>`;
     }
 
@@ -1349,6 +1474,8 @@ function renderOura(main){
         ${w&&w.calories!=null?`<div class="ostat"><b>${w.calories}</b><span>kcal</span></div>`:''}
         ${o.activity&&o.activity.steps!=null?`<div class="ostat"><b>${o.activity.steps.toLocaleString()}</b><span>steps today</span></div>`:''}
         ${o.activity&&o.activity.score!=null?`<div class="ostat"><b>${o.activity.score}</b><span>activity score</span></div>`:''}
+        ${o.readiness&&o.readiness.score!=null?`<div class="ostat"><b>${o.readiness.score}</b><span>readiness</span></div>`:''}
+        ${o.sleep&&o.sleep.score!=null?`<div class="ostat"><b>${o.sleep.score}</b><span>sleep score</span></div>`:''}
       </div>
       ${w?`<div class="cue" style="margin-top:8px">Oura logged this as <b>${w.activity}</b>${w.label?` (${w.label})`:''}${w.intensity?` · ${w.intensity} intensity`:''}${w.distance?` · ${metresToMiles(w.distance)} mi`:''}.</div>`:''}`;
   }
@@ -1555,6 +1682,7 @@ function renderClasses(main){
           <div class="exname">${ev.title}</div>
           <div class="precor">from your calendar</div>
           ${done&&done.done?`<div class="last">Done · ${done.min||'—'} min · RPE ${done.rpe||'—'}</div>`:''}
+          ${done&&(done.gear||[]).length?`<div class="gearline">${done.gear.map(g=>GEAR_BY[g]?GEAR_BY[g].n:g).join(' · ')}</div>`:''}
         </div>
       </div>
       <div class="sets">
@@ -1562,19 +1690,39 @@ function renderClasses(main){
           <div class="field"><input type="number" inputmode="numeric" class="cm" value="${done?done.min||'':''}" placeholder="0"><label>min</label></div>
           <div class="field"><input type="number" inputmode="numeric" class="cr" value="${done?done.rpe||'':''}" placeholder="1-10"><label>RPE</label></div>
         </div>
+        <div class="lbl" style="margin:2px 0 7px">What did the class use?</div>
+        <div class="gearwrap">
+          ${GEAR.map(g=>`<button class="chip ${(done&&(done.gear||[]).includes(g.id))?'on':''}" data-g="${g.id}">
+            <i>${g.icon}</i><span>${g.n}</span></button>`).join('')}
+        </div>
         <div class="fieldrow"><textarea class="cn" rows="2" placeholder="How did it feel?">${done?done.notes||'':''}</textarea></div>
         <button class="btn studio wide">${done&&done.done?'Logged ✓':'Mark done'}</button>
       </div>`;
     card.querySelector('.exmeta').onclick=()=>card.classList.toggle('open');
     card.querySelector('.clock').onclick=()=>card.classList.toggle('open');
-    card.querySelector('button').onclick=async()=>{
+
+    card.querySelectorAll('.chip').forEach(ch=>{
+      ch.onclick=e=>{
+        e.stopPropagation();
+        const c=l.classes[ev.uid]=l.classes[ev.uid]||{done:false,gear:[]};
+        c.gear=c.gear||[];
+        const id=ch.dataset.g, i=c.gear.indexOf(id);
+        if(i<0) c.gear.push(id); else c.gear.splice(i,1);
+        ch.classList.toggle('on', i<0);
+        persist();
+      };
+    });
+
+    card.querySelector('.btn.studio').onclick=async()=>{
       // no clock run? fall back to the booked time and the minutes typed in
       if(!l.startedAt){
         const base=new Date(selected+'T'+(ev.time||'18:00')+':00');
         l.startedAt=base.toISOString();
         l.finishedAt=new Date(base.getTime()+(+(card.querySelector('.cm').value)||60)*60000).toISOString();
       }
+      const prevc=l.classes[ev.uid]||{};
       l.classes[ev.uid]={done:true,
+        gear:prevc.gear||[],
         min:card.querySelector('.cm').value,
         rpe:card.querySelector('.cr').value,
         notes:card.querySelector('.cn').value};
@@ -1817,14 +1965,36 @@ async function ouraToken(){
 async function ouraPull(ds){
   const l=DB.logs[ds]; if(!l) return;
   const token=await ouraToken();
-  const data=await ouraPost('session',{
-    token, date:ds,
-    start:l.startedAt||null,
-    end:l.finishedAt||null,
-  });
+  let start=l.startedAt||null, end=l.finishedAt||null;
+  // Never ran the clock on an old session? Ask for the day, then use the window
+  // of whatever workout Oura detected — better than no heart rate at all.
+  let data=await ouraPost('session',{token, date:ds, start, end});
+  if(!start && (data.workouts||[]).length){
+    const w=data.workouts.find(w=>w.start && w.end);
+    if(w){
+      const re=await ouraPost('session',{token, date:ds, start:w.start, end:w.end});
+      if(re.hr){ data=re; l.startedAt=l.startedAt||w.start; l.finishedAt=l.finishedAt||w.end; }
+    }
+  }
   l.oura=Object.assign({pulledAt:new Date().toISOString()}, data);
   persist();
   return l.oura;
+}
+/* Backfill: walk the logged sessions and fetch what Oura has for each.
+   Sequential and gently paced — Oura rate-limits, and there's no hurry. */
+async function ouraBackfill(onProgress, force){
+  const days=allSessions().filter(ds=> force || !DB.logs[ds].oura);
+  let done=0, failed=0;
+  for(const ds of days){
+    onProgress && onProgress(`Pulling ${ds}… (${done+1}/${days.length})`);
+    try{ await ouraPull(ds); done++; }
+    catch(e){
+      if(e.message==='reauth'){ delete DB.settings.oura; persist(); throw e; }
+      failed++;
+    }
+    await new Promise(r=>setTimeout(r,400));
+  }
+  return {done, failed, total:days.length};
 }
 function ouraConnect(){ window.location.href='/oura/start'; }
 function ouraDisconnect(){ delete DB.settings.oura; persist(); render(); }
