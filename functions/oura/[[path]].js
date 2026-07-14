@@ -149,16 +149,22 @@ export const onRequestPost = async ({ request, params, env }) => {
     try {
       // Heart rate is only fetched for the window the session actually spanned —
       // that's what makes it a workout number rather than a whole-day average.
-      const [hr, workouts, activity] = await Promise.all([
+      // Readiness and sleep are for the date, and give the session context:
+      // a heavy day on poor sleep reads very differently from the same day rested.
+      const [hr, workouts, activity, readiness, sleep] = await Promise.all([
         start && end
           ? get('heartrate', { start_datetime: start, end_datetime: end })
           : Promise.resolve({ data: [] }),
         get('workout', { start_date: date, end_date: date }),
         get('daily_activity', { start_date: date, end_date: date }),
+        get('daily_readiness', { start_date: date, end_date: date }),
+        get('daily_sleep', { start_date: date, end_date: date }),
       ]);
 
       const bpm = (hr.data || []).map(p => p.bpm).filter(Number.isFinite);
       const day = (activity.data || [])[0] || null;
+      const rdy = (readiness.data || [])[0] || null;
+      const slp = (sleep.data || [])[0] || null;
 
       return json({
         hr: bpm.length
@@ -183,6 +189,13 @@ export const onRequestPost = async ({ request, params, env }) => {
           active_calories: day.active_calories ?? null,
           total_calories: day.total_calories ?? null,
         },
+        readiness: rdy && {
+          score: rdy.score ?? null,
+          hrv: rdy.contributors?.hrv_balance ?? null,
+          resting_hr: rdy.contributors?.resting_heart_rate ?? null,
+          temp: rdy.temperature_deviation ?? null,
+        },
+        sleep: slp && { score: slp.score ?? null },
       });
     } catch (e) {
       if (e.message === 'reauth') return json({ error: 'reauth' }, 401);
