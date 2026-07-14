@@ -86,6 +86,13 @@
   .dotlive{width:6px;height:6px;border-radius:50%;background:var(--pin);display:inline-block;
     margin-right:5px;animation:pulse 1.6s ease-in-out infinite}
   button.btn.stop{background:#E5533D;border-color:#E5533D;color:#2A0A05}
+  .pwrap{position:relative}
+  .pwrap input{padding-right:62px}
+  .peye{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:var(--line);border:0;
+    color:var(--steel);border-radius:7px;padding:6px 9px;cursor:pointer;
+    font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:11px;letter-spacing:.10em;
+    text-transform:uppercase}
+  .peye:active{color:var(--chalk)}
   .gearwrap{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
   .chip{display:inline-flex;align-items:center;gap:5px;background:var(--panel-2);border:1px solid var(--line);
     color:var(--steel);border-radius:999px;padding:7px 11px 7px 9px;cursor:pointer;font-size:12.5px;
@@ -264,7 +271,7 @@
     max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   #undo button{border-radius:0 10px 10px 0;border-left:0;background:var(--panel-2)}
 
-  .bar{position:fixed;left:0;right:0;bottom:0;z-index:30;
+  .bar{position:fixed;left:0;right:0;bottom:0;z-index:30;transform:translateZ(0);will-change:transform;
     background:linear-gradient(0deg,var(--ink) 62%,rgba(14,16,19,0));
     padding:14px var(--pad) calc(env(safe-area-inset-bottom) + 14px)}
   .barin{max-width:520px;margin:0 auto;display:flex;gap:8px}
@@ -676,6 +683,7 @@ const GEAR=[
   {id:'jump',       n:'High jump',     icon:gi('<path d="M3 20h18"/><rect x="13" y="10" width="8" height="10"/><path d="M8 18V9l-3 4"/><circle cx="8" cy="5" r="1.8"/>')},
   {id:'kettlebell', n:'Kettlebells',   icon:gi('<path d="M9 8a3 3 0 0 1 6 0"/><path d="M8 8c-2 2-3 4-3 7a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3c0-3-1-5-3-7z"/>')},
   {id:'dumbbell',   n:'Dumbbells',     icon:gi('<path d="M4 8v8M7 6v12M17 6v12M20 8v8M7 12h10"/>')},
+  {id:'tireflip',   n:'Tire flip',     icon:gi('<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.4"/><path d="M12 4.2v2.4M12 17.4v2.4M4.2 12h2.4M17.4 12h2.4"/>')},
 ];
 const GEAR_BY={}; GEAR.forEach(g=>GEAR_BY[g.id]=g);
 
@@ -964,7 +972,11 @@ function buildBackup(container){
   cloud.style.marginBottom='8px';
   cloud.innerHTML=`
     <div class="fieldrow"><div class="lbl">Cloud backup — passphrase</div>
-      <input type="text" id="sk" value="${DB.settings.syncKey||''}" placeholder="8+ characters, only you know it"></div>
+      <div class="pwrap">
+        <input type="password" id="sk" autocomplete="off" autocapitalize="off" spellcheck="false"
+          value="${DB.settings.syncKey||''}" placeholder="8+ characters, only you know it">
+        <button class="peye" id="peye" aria-label="Show passphrase">Show</button>
+      </div></div>
     <div style="display:flex;gap:8px">
       <button class="btn ghost wide" id="snow">Back up now</button>
       <button class="btn ghost wide" id="spull">Restore from cloud</button>
@@ -977,7 +989,14 @@ function buildBackup(container){
   container.appendChild(cloud);
 
   const smsg=cloud.querySelector('#smsg');
-  cloud.querySelector('#sk').oninput=e=>{ DB.settings.syncKey=e.target.value.trim(); Store.save(DB); paintSync(); };
+  const skEl=cloud.querySelector('#sk');
+  skEl.oninput=e=>{ DB.settings.syncKey=e.target.value.trim(); Store.save(DB); paintSync(); };
+  const eye=cloud.querySelector('#peye');
+  eye.onclick=()=>{
+    const shown = skEl.type==='text';
+    skEl.type = shown ? 'password' : 'text';
+    eye.textContent = shown ? 'Show' : 'Hide';
+  };
   cloud.querySelector('#snow').onclick=async()=>{
     if(!Sync.on()) return flash(smsg,'Choose a passphrase of at least 8 characters first.','err');
     flash(smsg,'Backing up…','');
@@ -1070,6 +1089,10 @@ function renderHistory(){
     const h=document.createElement('div'); h.className='hsec'; h.textContent='Backup';
     main.appendChild(h);
     buildBackup(main);
+    const b0=document.createElement('button');
+    b0.className='btn wide'; b0.style.marginTop='18px'; b0.textContent='Back to this week';
+    b0.onclick=()=>{ view='week'; weekStart=mondayOf(today); selected=iso(today); render(); window.scrollTo({top:0}); };
+    main.appendChild(b0);
     return;
   }
 
@@ -1292,6 +1315,13 @@ function renderHistory(){
   const h4=document.createElement('div'); h4.className='hsec'; h4.textContent='Backup';
   main.appendChild(h4);
   buildBackup(main);
+
+  const back=document.createElement('button');
+  back.className='btn wide';
+  back.style.marginTop='18px';
+  back.textContent='Back to this week';
+  back.onclick=()=>{ view='week'; weekStart=mondayOf(today); selected=iso(today); render(); window.scrollTo({top:0}); };
+  main.appendChild(back);
 
   const foot=document.createElement('div');
   foot.className='foot';
@@ -1740,14 +1770,13 @@ function startRest(sec){
 }
 function renderBar(){
   const bar=document.getElementById('bar');
+  const wrapEl=bar.parentElement;
   bar.innerHTML='';
-  if(view==='history'){
-    const b=document.createElement('button');
-    b.className='btn wide'; b.textContent='Back to this week';
-    b.onclick=()=>{ view='week'; weekStart=mondayOf(today); selected=iso(today); render(); window.scrollTo({top:0}); };
-    bar.appendChild(b);
-    return;
-  }
+  // History scrolls long and has no live session — a floating bar there is just
+  // something to go wrong. Hide it and let the in-flow button do the job.
+  wrapEl.style.display = view==='history' ? 'none' : 'block';
+  document.body.style.paddingBottom = view==='history' ? '32px' : '';
+  if(view==='history') return;
 
   const st=sessionState(selected), l=DB.logs[selected];
 
