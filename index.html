@@ -866,8 +866,7 @@ function classInfo(ds){
   const done=Object.entries(l.classes||{}).filter(([,c])=>c.done);
   const names=done.map(([uid])=>{ const e=DB.events.find(e=>e.uid===uid); return e?e.title:'Class'; });
   const mins=done.reduce((a,[,c])=>a+(+c.min||0),0);
-  const rpe=done.map(([,c])=>+c.rpe).filter(Boolean);
-  return {names,mins,rpe:rpe.length?(rpe.reduce((a,b)=>a+b,0)/rpe.length):0,count:done.length};
+  return {names,mins,count:done.length};
 }
 /* best top-set weight per session, per exercise — the progression series */
 function series(exId){
@@ -1260,7 +1259,7 @@ function renderHistory(){
         .map(g=>GEAR_BY[g]?GEAR_BY[g].n:g);
       row.innerHTML=`<div class="tag class">C</div>
         <div class="sm"><b>${c.names.join(', ')||'Class'}</b>
-          <span>${when}${durationMin(l)?` · ${durationMin(l)} min`:(c.mins?` · ${c.mins} min`:'')}${c.rpe?` · RPE ${c.rpe.toFixed(0)}`:''}${chr}</span>
+          <span>${when}${durationMin(l)?` · ${durationMin(l)} min`:(c.mins?` · ${c.mins} min`:'')}${chr}</span>
           ${gearNames.length?`<span class="gearline">${gearNames.join(' · ')}</span>`:''}</div>
         <button class="del" aria-label="Delete session">🗑</button>`;
     }
@@ -1681,14 +1680,13 @@ function renderClasses(main){
         <div class="exmeta">
           <div class="exname">${ev.title}</div>
           <div class="precor">from your calendar</div>
-          ${done&&done.done?`<div class="last">Done · ${done.min||'—'} min · RPE ${done.rpe||'—'}</div>`:''}
+          ${done&&done.done?`<div class="last">Done · ${done.min||'—'} min</div>`:''}
           ${done&&(done.gear||[]).length?`<div class="gearline">${done.gear.map(g=>GEAR_BY[g]?GEAR_BY[g].n:g).join(' · ')}</div>`:''}
         </div>
       </div>
       <div class="sets">
-        <div class="setrow" style="grid-template-columns:1fr 1fr">
+        <div class="setrow" style="grid-template-columns:1fr">
           <div class="field"><input type="number" inputmode="numeric" class="cm" value="${done?done.min||'':''}" placeholder="0"><label>min</label></div>
-          <div class="field"><input type="number" inputmode="numeric" class="cr" value="${done?done.rpe||'':''}" placeholder="1-10"><label>RPE</label></div>
         </div>
         <div class="lbl" style="margin:2px 0 7px">What did the class use?</div>
         <div class="gearwrap">
@@ -1724,7 +1722,6 @@ function renderClasses(main){
       l.classes[ev.uid]={done:true,
         gear:prevc.gear||[],
         min:card.querySelector('.cm').value,
-        rpe:card.querySelector('.cr').value,
         notes:card.querySelector('.cn').value};
       l.done=true; persist(); render();
       if(ouraOn()){ try{ await ouraPull(selected); render(); }catch(e){} }
